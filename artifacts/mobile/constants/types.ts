@@ -79,11 +79,3 @@ export interface WeeklyPlan {
   notes?: string;
 }
 
-export interface CalculationResults {
-  bmi: number;
-  bmiCategory: "underweight" | "normal" | "overweight" | "obese";
-  bmr: number;
-  tdee: number;
-  targetCalories: number;
-  macros: DailyMacros;
-}

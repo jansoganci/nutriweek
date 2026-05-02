@@ -80,7 +80,7 @@ interface MacroBarProps {
   color: string;
 }
 function MacroBar({ label, grams, totalCalories, calsPerGram, color }: MacroBarProps) {
-  const pct = Math.round((grams * calsPerGram * 100) / totalCalories);
+  const pct = totalCalories > 0 ? Math.round((grams * calsPerGram * 100) / totalCalories) : 0;
   return (
     <View style={styles.macroBarWrap}>
       <View style={styles.macroBarHeader}>
@@ -108,9 +108,19 @@ export default function ResultsScreen() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    if (loaded && results.bmi === 0) {
+      router.replace("/(onboarding)/step1");
+    }
+  }, [loaded, results.bmi]);
+
+  useEffect(() => {
     AsyncStorage.getItem("userProfile").then((raw) => {
+      console.log("[NutriWeek] userProfile raw:", raw);
+
       if (raw) {
         const profile = JSON.parse(raw) as UserProfile;
+        console.log("[NutriWeek] userProfile parsed:", JSON.stringify(profile, null, 2));
+
         if (
           profile.weight &&
           profile.height &&
@@ -119,9 +129,22 @@ export default function ResultsScreen() {
           profile.activityLevel &&
           profile.goal
         ) {
-          setResults(calculateAll(profile));
+          const calc = calculateAll(profile);
+          console.log("[NutriWeek] calculationResults:", JSON.stringify(calc, null, 2));
+          setResults(calc);
           setGoal(profile.goal as Goal);
+        } else {
+          console.warn("[NutriWeek] Guard failed — missing required fields:", {
+            weight: profile.weight,
+            height: profile.height,
+            age: profile.age,
+            gender: profile.gender,
+            activityLevel: profile.activityLevel,
+            goal: profile.goal,
+          });
         }
+      } else {
+        console.warn("[NutriWeek] No userProfile found in AsyncStorage");
       }
       setLoaded(true);
     });
@@ -140,6 +163,17 @@ export default function ResultsScreen() {
   );
 
   const goalMeta = GOAL_META[goal];
+
+  if (!loaded) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ fontSize: 40 }}>🦝</Text>
+        <Text style={{ color: C.textSecondary, marginTop: 12, fontSize: 15 }}>
+          Crunching your numbers…
+        </Text>
+      </View>
+    );
+  }
 
   const handleStart = async () => {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
