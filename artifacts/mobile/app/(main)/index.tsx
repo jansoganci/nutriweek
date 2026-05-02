@@ -337,8 +337,11 @@ export default function MealPlanScreen() {
       }
 
       const planRaw = await AsyncStorage.getItem("weeklyPlan");
+      console.log("[home:init] weeklyPlan raw from AsyncStorage:", planRaw ? "found" : "missing");
       if (planRaw) {
-        setWeeklyPlan(JSON.parse(planRaw) as MockWeeklyPlan);
+        const parsedPlan = JSON.parse(planRaw) as MockWeeklyPlan;
+        console.log("[home:init] weeklyPlan parsed days length:", parsedPlan.days?.length ?? 0);
+        setWeeklyPlan(parsedPlan);
       } else {
         setShowModal(true);
       }
@@ -370,6 +373,7 @@ export default function MealPlanScreen() {
     setIsGenerating(true);
     try {
       const plan = await generateWeeklyPlan();
+      console.log("[home:handleGenerate] weeklyPlan received from generateWeeklyPlan():", plan.days?.length ?? 0);
       setWeeklyPlan(plan);
     } catch (err) {
       const message = getPlanErrorMessage(err);

@@ -210,6 +210,7 @@ export async function askGemma(prompt: string): Promise<string> {
     }
 
     const data = (await response.json()) as { response?: string };
+    console.log("[askGemma] Raw response structure:", JSON.stringify(data));
     console.log("[askGemma] Response length:", (data.response ?? "").length, "chars");
     return data.response ?? "";
   } catch (err) {
@@ -231,6 +232,7 @@ export async function askGemma(prompt: string): Promise<string> {
 
 function parseWeeklyPlan(text: string): MockWeeklyPlan {
   const match = text.match(/\{[\s\S]*\}/);
+  console.log("[parseWeeklyPlan] regex match success:", !!match);
   if (!match) throw new Error("PARSE_ERROR");
 
   let parsed: MockWeeklyPlan;
@@ -244,6 +246,7 @@ function parseWeeklyPlan(text: string): MockWeeklyPlan {
   if (!parsed.days || !Array.isArray(parsed.days) || parsed.days.length === 0) {
     throw new Error("PARSE_ERROR");
   }
+  console.log("[parseWeeklyPlan] parsed days length:", parsed.days.length);
 
   // Normalise any missing numeric meal fields to 0
   parsed.days = parsed.days.map((day) => ({
@@ -307,6 +310,7 @@ export async function generateWeeklyPlan(
   }
 
   await AsyncStorage.setItem("weeklyPlan", JSON.stringify(plan));
+  console.log("[generateWeeklyPlan] weeklyPlan saved to AsyncStorage successfully");
   return plan;
 }
 
