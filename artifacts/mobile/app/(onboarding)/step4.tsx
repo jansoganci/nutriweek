@@ -94,7 +94,15 @@ export default function Step4Screen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      <StepProgress currentStep={4} totalSteps={4} />
+      <View style={styles.headerRow}>
+        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
+          <Text style={styles.backText}>‹</Text>
+        </Pressable>
+        <View style={styles.progressWrap}>
+          <StepProgress currentStep={4} totalSteps={4} />
+        </View>
+        <View style={styles.rightSlot} />
+      </View>
 
       <View style={styles.mascotRow}>
         <RockyMascot mood="happy" size={64} message={rockyMessage} />
@@ -145,6 +153,27 @@ export default function Step4Screen() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  backBtn: {
+    width: 40,
+    alignItems: "flex-start",
+  },
+  backText: {
+    fontSize: 28,
+    fontWeight: "600" as const,
+    color: C.text,
+    lineHeight: 32,
+  },
+  progressWrap: {
+    flex: 1,
+    alignItems: "center",
+  },
+  rightSlot: {
+    width: 60,
   },
   mascotRow: {
     alignItems: "center",

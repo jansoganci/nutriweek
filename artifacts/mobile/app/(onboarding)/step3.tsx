@@ -92,11 +92,16 @@ export default function Step3Screen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header row: progress + skip */}
+        {/* Header row: back + progress + skip */}
         <View style={styles.headerRow}>
-          <StepProgress currentStep={3} totalSteps={4} />
-          <Pressable onPress={handleSkip} hitSlop={12}>
-            <Text style={styles.skipText}>Skip for now</Text>
+          <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
+            <Text style={styles.backText}>‹</Text>
+          </Pressable>
+          <View style={styles.progressWrap}>
+            <StepProgress currentStep={3} totalSteps={4} />
+          </View>
+          <Pressable onPress={handleSkip} hitSlop={12} style={styles.skipSlot}>
+            <Text style={styles.skipText}>Skip</Text>
           </Pressable>
         </View>
 
@@ -145,7 +150,24 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+  },
+  backBtn: {
+    width: 40,
+    alignItems: "flex-start",
+  },
+  backText: {
+    fontSize: 28,
+    fontWeight: "600" as const,
+    color: C.text,
+    lineHeight: 32,
+  },
+  progressWrap: {
+    flex: 1,
+    alignItems: "center",
+  },
+  skipSlot: {
+    width: 60,
+    alignItems: "flex-end",
   },
   skipText: {
     fontSize: 15,
