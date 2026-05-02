@@ -35,7 +35,6 @@ const TIMEOUT_MS = 120_000;
 
 const NGROK_HEADERS = {
   "Content-Type": "application/json",
-  "ngrok-skip-browser-warning": "true",
 };
 
 // ─── Fallback mock plan ────────────────────────────────────────────────────────
