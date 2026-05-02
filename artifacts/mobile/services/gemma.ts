@@ -185,8 +185,11 @@ export async function askGemma(prompt: string): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
+  const url = `${OLLAMA_BASE_URL}/api/generate`;
+  console.log("[askGemma] → fetch START", url, "model:", MODEL);
+
   try {
-    const resp = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+    const resp = await fetch(url, {
       method: "POST",
       headers: NGROK_HEADERS,
       body: JSON.stringify({ model: MODEL, prompt, stream: false }),
@@ -195,17 +198,25 @@ export async function askGemma(prompt: string): Promise<string> {
 
     clearTimeout(timeoutId);
 
+    console.log("[askGemma] ← fetch END  status:", resp.status, resp.statusText);
+
     if (!resp.ok) {
+      const body = await resp.text().catch(() => "(unreadable body)");
+      console.error("[askGemma] Non-OK response body:", body);
       throw new Error("OLLAMA_OFFLINE");
     }
 
     const data = (await resp.json()) as { response?: string };
+    console.log("[askGemma] Response length:", (data.response ?? "").length, "chars");
     return data.response ?? "";
   } catch (err) {
     clearTimeout(timeoutId);
     if (err instanceof Error) {
+      console.error("[askGemma] CATCH name:", err.name, "| message:", err.message);
       if (err.name === "AbortError") throw new Error("OLLAMA_TIMEOUT");
       if (err.message === "OLLAMA_OFFLINE" || err.message === "OLLAMA_TIMEOUT") throw err;
+    } else {
+      console.error("[askGemma] CATCH unknown error:", err);
     }
     throw new Error("OLLAMA_OFFLINE");
   }
