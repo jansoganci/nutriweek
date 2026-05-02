@@ -325,6 +325,8 @@ export default function MealPlanScreen() {
   const [loaded, setLoaded] = useState(false);
   const [streak, setStreak] = useState<number | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [debugRaw, setDebugRaw] = useState<string>("");
+  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -447,15 +449,27 @@ export default function MealPlanScreen() {
         {/* Weekly Plan Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>This Week</Text>
-          {weeklyPlan && !isGenerating && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Pressable
-              onPress={handleGenerate}
               hitSlop={8}
-              style={styles.refreshBtn}
+              onPress={async () => {
+                const raw = await AsyncStorage.getItem("debugRaw");
+                setDebugRaw(raw ?? "(debugRaw boş)");
+                setShowDebug(true);
+              }}
             >
-              <Text style={styles.refreshIcon}>↻</Text>
+              <Text style={{ fontSize: 13, color: C.textSecondary, textDecorationLine: "underline" }}>RAW</Text>
             </Pressable>
-          )}
+            {weeklyPlan && !isGenerating && (
+              <Pressable
+                onPress={handleGenerate}
+                hitSlop={8}
+                style={styles.refreshBtn}
+              >
+                <Text style={styles.refreshIcon}>↻</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {isGenerating && (
@@ -504,6 +518,23 @@ export default function MealPlanScreen() {
         onGenerate={handleGenerate}
         onDismiss={handleDismiss}
       />
+
+      {/* Debug raw response modal */}
+      <Modal visible={showDebug} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)", padding: 16, paddingTop: insets.top + 16 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>debugRaw ({debugRaw.length} chars)</Text>
+            <Pressable onPress={() => setShowDebug(false)} hitSlop={12}>
+              <Text style={{ color: "#FF6B35", fontSize: 16, fontWeight: "700" }}>Kapat</Text>
+            </Pressable>
+          </View>
+          <ScrollView style={{ flex: 1 }}>
+            <Text selectable style={{ color: "#00FF88", fontFamily: "monospace", fontSize: 11, lineHeight: 16 }}>
+              {debugRaw || "(boş)"}
+            </Text>
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }

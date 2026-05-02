@@ -294,6 +294,7 @@ export async function generateWeeklyPlan(
   let rawText: string;
   try {
     rawText = await askGemma(prompt);
+    await AsyncStorage.setItem("debugRaw", rawText);
     // eslint-disable-next-line no-alert
     alert("CEVAP: " + rawText.substring(0, 300));
   } catch (err) {
