@@ -14,24 +14,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import RockyMascot from "@/components/RockyMascot";
 import colors from "@/constants/colors";
 import type { Goal, UserProfile } from "@/constants/types";
+import calculateAll, { type CalculationResults } from "@/services/calculations";
 
 const C = colors.light;
 
-// TODO: replace with real calculations from services/calculations.ts
-const PLACEHOLDER = {
-  bmi: 24.3,
-  calories: 2100,
-  protein: 157,
-  carbs: 236,
-  fat: 58,
+// Fallback shown while AsyncStorage loads
+const FALLBACK_RESULTS: CalculationResults = {
+  bmi: 0,
+  bmiCategory: { label: "Healthy", color: "#4CAF50" },
+  bmr: 0,
+  tdee: 0,
+  targetCalories: 0,
+  macros: { protein: 0, carbs: 0, fat: 0 },
+  macroPercentages: { protein: 30, carbs: 45, fat: 25 },
 };
-
-function getBMIInfo(bmi: number): { label: string; color: string } {
-  if (bmi < 18.5) return { label: "Underweight", color: C.warning };
-  if (bmi < 25) return { label: "Healthy", color: C.success };
-  if (bmi < 30) return { label: "Overweight", color: C.warning };
-  return { label: "Obese", color: "#FF4444" };
-}
 
 function getRockyMessage(bmiLabel: string): string {
   switch (bmiLabel) {
@@ -107,16 +103,32 @@ function MacroBar({ label, grams, totalCalories, calsPerGram, color }: MacroBarP
 
 export default function ResultsScreen() {
   const insets = useSafeAreaInsets();
-  const [profile, setProfile] = useState<Partial<UserProfile> | null>(null);
+  const [results, setResults] = useState<CalculationResults>(FALLBACK_RESULTS);
+  const [goal, setGoal] = useState<Goal>("maintain");
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem("userProfile").then((raw) => {
-      if (raw) setProfile(JSON.parse(raw));
+      if (raw) {
+        const profile = JSON.parse(raw) as UserProfile;
+        if (
+          profile.weight &&
+          profile.height &&
+          profile.age &&
+          profile.gender &&
+          profile.activityLevel &&
+          profile.goal
+        ) {
+          setResults(calculateAll(profile));
+          setGoal(profile.goal as Goal);
+        }
+      }
+      setLoaded(true);
     });
   }, []);
 
-  const bmi = PLACEHOLDER.bmi;
-  const { label: bmiLabel, color: bmiColor } = getBMIInfo(bmi);
+  const { bmi, bmiCategory, targetCalories, macros, macroPercentages } = results;
+  const { label: bmiLabel, color: bmiColor } = bmiCategory;
   const rockyMessage = getRockyMessage(bmiLabel);
 
   // BMI scale position: clamp between 15 and 40 for display
@@ -127,7 +139,6 @@ export default function ResultsScreen() {
     98
   );
 
-  const goal: Goal = (profile?.goal as Goal) ?? "maintain";
   const goalMeta = GOAL_META[goal];
 
   const handleStart = async () => {
@@ -204,13 +215,13 @@ export default function ResultsScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Your Daily Targets</Text>
         <View style={styles.statList}>
-          <StatRow emoji="🔥" label="Calories" value={`${PLACEHOLDER.calories} kcal`} />
+          <StatRow emoji="🔥" label="Calories" value={`${targetCalories} kcal`} />
           <View style={styles.divider} />
-          <StatRow emoji="🥩" label="Protein" value={`${PLACEHOLDER.protein} g`} />
+          <StatRow emoji="🥩" label="Protein" value={`${macros.protein} g`} />
           <View style={styles.divider} />
-          <StatRow emoji="🍚" label="Carbs" value={`${PLACEHOLDER.carbs} g`} />
+          <StatRow emoji="🍚" label="Carbs" value={`${macros.carbs} g`} />
           <View style={styles.divider} />
-          <StatRow emoji="🥑" label="Fat" value={`${PLACEHOLDER.fat} g`} />
+          <StatRow emoji="🥑" label="Fat" value={`${macros.fat} g`} />
         </View>
       </View>
 
@@ -220,22 +231,22 @@ export default function ResultsScreen() {
         <View style={styles.macroBars}>
           <MacroBar
             label="Protein"
-            grams={PLACEHOLDER.protein}
-            totalCalories={PLACEHOLDER.calories}
+            grams={macros.protein}
+            totalCalories={targetCalories}
             calsPerGram={4}
             color={C.primary}
           />
           <MacroBar
             label="Carbs"
-            grams={PLACEHOLDER.carbs}
-            totalCalories={PLACEHOLDER.calories}
+            grams={macros.carbs}
+            totalCalories={targetCalories}
             calsPerGram={4}
             color={C.success}
           />
           <MacroBar
             label="Fat"
-            grams={PLACEHOLDER.fat}
-            totalCalories={PLACEHOLDER.calories}
+            grams={macros.fat}
+            totalCalories={targetCalories}
             calsPerGram={9}
             color={C.warning}
           />
