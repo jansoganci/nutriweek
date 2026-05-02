@@ -1,0 +1,168 @@
+Build the main home screen in `app/(main)/index.tsx`.
+
+This is the heart of the app. User sees their weekly meal plan and daily macro progress.
+
+DESIGN:
+- Background: #FAFAFA
+- ScrollView, full screen
+- Bottom tab bar with 3 tabs: Home (this screen), Log, Profile
+
+LAYOUT (top to bottom):
+
+1. HEADER
+- Left: "Good morning! 🦝" (greeting changes by time of day)
+  - 5am-11am: "Good morning!"
+  - 11am-5pm: "Good afternoon!"
+  - 5pm-10pm: "Good evening!"
+  - 10pm-5am: "Still up? 🦝"
+- Right: small Rocky emoji button that shows a random fun fact when tapped
+- Below greeting: user's name or "Champion" if no name set
+
+2. FIRST LAUNCH POPUP (Modal)
+Show this modal automatically if no weekly plan exists in AsyncStorage:
+- Dark semi-transparent overlay
+- White card centered on screen
+- Large Rocky 🦝 emoji at top
+- Title: "Ready to build your first meal plan?"
+- Subtitle: "I'll create a personalized 7-day plan based on your goals 🎯"
+- Two buttons:
+  - Primary: "Let's go! 🦝" — #FF6B35, white text, full width
+  - Secondary: "Maybe later" — text only, #2D2D2D, below primary
+- On "Let's go!": close modal, set isGenerating to true, call generateWeeklyPlan() from services/gemma.ts
+- On "Maybe later": close modal, show empty state
+
+3. DAILY MACRO SUMMARY CARD
+- Title: "Today's Progress"
+- White card, subtle shadow
+- 4 macro rings in a row (use MacroRing component):
+  - Calories 🔥
+  - Protein 🥩
+  - Carbs 🍚
+  - Fat 🥑
+- Each ring shows: current / target
+- Below rings: "X kcal remaining" or "X kcal over" in small text
+- For now show 0 / target values (real logging comes later)
+- Read targets from AsyncStorage key "calculationResults"
+
+4. WEEKLY PLAN SECTION
+- Title: "This Week" + small refresh icon button (top right of section)
+- 7 day cards in a vertical list
+- Today's card is highlighted with #FF6B35 left border and #FFF3EE background
+- Other days: white background, subtle shadow
+
+Each day card shows:
+- Day name (Monday, Tuesday etc.) + date
+- "Today" badge on current day (orange pill)
+- 3 meal rows: Breakfast, Lunch, Dinner
+- Each meal row: meal emoji + meal name + calories
+- Total daily calories at bottom right
+- Tapping a day card expands it (accordion style) to show full meal details
+
+LOADING STATE:
+When generateWeeklyPlan() is running:
+- Replace weekly plan section with:
+  - Animated Rocky 🦝 (use simple opacity animation, pulsing)
+  - Text: "Rocky is cooking your plan... 🍳"
+  - Subtitle: "This takes about 30 seconds"
+  - Indeterminate progress bar in #FF6B35
+
+EMPTY STATE:
+When user tapped "Maybe later":
+- Show a card with Rocky looking sad (🦝)
+- Text: "No plan yet!"
+- Button: "Generate My Plan 🦝" in #FF6B35
+- On tap: show the popup again
+
+5. QUICK ACTION BUTTON
+- Floating button bottom right (above tab bar)
+- #FF6B35 circle, white "+" icon
+- On tap: navigate to log screen
+- This is always visible
+
+MOCK DATA:
+Since Gemma 4 is not connected yet, use this mock weekly plan in generateWeeklyPlan() inside services/gemma.ts:
+
+const MOCK_PLAN = {
+  weekOf: "2026-05-04",
+  days: [
+    {
+      day: "Monday",
+      date: "2026-05-04",
+      totalCalories: 2100,
+      meals: [
+        { type: "Breakfast", name: "Oatmeal with Berries", calories: 380, emoji: "🥣" },
+        { type: "Lunch", name: "Grilled Chicken Salad", calories: 520, emoji: "🥗" },
+        { type: "Dinner", name: "Salmon with Vegetables", calories: 680, emoji: "🐟" },
+        { type: "Snack", name: "Greek Yogurt", calories: 150, emoji: "🥛" }
+      ]
+    },
+    {
+      day: "Tuesday",
+      date: "2026-05-05", 
+      totalCalories: 2080,
+      meals: [
+        { type: "Breakfast", name: "Scrambled Eggs & Toast", calories: 420, emoji: "🍳" },
+        { type: "Lunch", name: "Turkey Wrap", calories: 490, emoji: "🌯" },
+        { type: "Dinner", name: "Beef Stir Fry with Rice", calories: 720, emoji: "🥩" },
+        { type: "Snack", name: "Apple with Almond Butter", calories: 180, emoji: "🍎" }
+      ]
+    },
+    {
+      day: "Wednesday",
+      date: "2026-05-06",
+      totalCalories: 2150,
+      meals: [
+        { type: "Breakfast", name: "Protein Smoothie", calories: 350, emoji: "🥤" },
+        { type: "Lunch", name: "Quinoa Buddha Bowl", calories: 580, emoji: "🥙" },
+        { type: "Dinner", name: "Grilled Chicken & Sweet Potato", calories: 650, emoji: "🍗" },
+        { type: "Snack", name: "Mixed Nuts", calories: 200, emoji: "🥜" }
+      ]
+    },
+    {
+      day: "Thursday",
+      date: "2026-05-07",
+      totalCalories: 2090,
+      meals: [
+        { type: "Breakfast", name: "Avocado Toast & Eggs", calories: 440, emoji: "🥑" },
+        { type: "Lunch", name: "Lentil Soup", calories: 460, emoji: "🍲" },
+        { type: "Dinner", name: "Tuna Pasta", calories: 620, emoji: "🍝" },
+        { type: "Snack", name: "Cottage Cheese", calories: 140, emoji: "🧀" }
+      ]
+    },
+    {
+      day: "Friday",
+      date: "2026-05-08",
+      totalCalories: 2120,
+      meals: [
+        { type: "Breakfast", name: "Banana Pancakes", calories: 410, emoji: "🥞" },
+        { type: "Lunch", name: "Caesar Salad with Chicken", calories: 510, emoji: "🥗" },
+        { type: "Dinner", name: "Shrimp Tacos", calories: 680, emoji: "🌮" },
+        { type: "Snack", name: "Protein Bar", calories: 220, emoji: "🍫" }
+      ]
+    },
+    {
+      day: "Saturday",
+      date: "2026-05-09",
+      totalCalories: 2200,
+      meals: [
+        { type: "Breakfast", name: "Full English Breakfast", calories: 520, emoji: "🍳" },
+        { type: "Lunch", name: "Burger & Side Salad", calories: 620, emoji: "🍔" },
+        { type: "Dinner", name: "Grilled Steak & Veggies", calories: 750, emoji: "🥩" },
+        { type: "Snack", name: "Dark Chocolate", calories: 160, emoji: "🍫" }
+      ]
+    },
+    {
+      day: "Sunday",
+      date: "2026-05-10",
+      totalCalories: 2050,
+      meals: [
+        { type: "Breakfast", name: "Overnight Oats", calories: 380, emoji: "🥣" },
+        { type: "Lunch", name: "Vegetable Curry & Rice", calories: 540, emoji: "🍛" },
+        { type: "Dinner", name: "Baked Cod & Salad", calories: 580, emoji: "🐟" },
+        { type: "Snack", name: "Hummus & Veggies", calories: 170, emoji: "🥕" }
+      ]
+    }
+  ]
+}
+
+Save mock plan to AsyncStorage key "weeklyPlan" when generated.

@@ -1,7 +1,114 @@
-import type { DailyMacros, DietaryPreference, Goal, WeeklyPlan } from "@/constants/types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const OLLAMA_BASE_URL = "http://localhost:11434";
-const MODEL = "gemma3";
+import type { DailyMacros, DietaryPreference, Goal } from "@/constants/types";
+
+export interface MockMeal {
+  type: string;
+  name: string;
+  calories: number;
+  emoji: string;
+}
+
+export interface MockDayPlan {
+  day: string;
+  date: string;
+  totalCalories: number;
+  meals: MockMeal[];
+}
+
+export interface MockWeeklyPlan {
+  weekOf: string;
+  days: MockDayPlan[];
+}
+
+const MOCK_PLAN: MockWeeklyPlan = {
+  weekOf: "2026-05-04",
+  days: [
+    {
+      day: "Monday",
+      date: "2026-05-04",
+      totalCalories: 2100,
+      meals: [
+        { type: "Breakfast", name: "Oatmeal with Berries", calories: 380, emoji: "🥣" },
+        { type: "Lunch", name: "Grilled Chicken Salad", calories: 520, emoji: "🥗" },
+        { type: "Dinner", name: "Salmon with Vegetables", calories: 680, emoji: "🐟" },
+        { type: "Snack", name: "Greek Yogurt", calories: 150, emoji: "🥛" },
+      ],
+    },
+    {
+      day: "Tuesday",
+      date: "2026-05-05",
+      totalCalories: 2080,
+      meals: [
+        { type: "Breakfast", name: "Scrambled Eggs & Toast", calories: 420, emoji: "🍳" },
+        { type: "Lunch", name: "Turkey Wrap", calories: 490, emoji: "🌯" },
+        { type: "Dinner", name: "Beef Stir Fry with Rice", calories: 720, emoji: "🥩" },
+        { type: "Snack", name: "Apple with Almond Butter", calories: 180, emoji: "🍎" },
+      ],
+    },
+    {
+      day: "Wednesday",
+      date: "2026-05-06",
+      totalCalories: 2150,
+      meals: [
+        { type: "Breakfast", name: "Protein Smoothie", calories: 350, emoji: "🥤" },
+        { type: "Lunch", name: "Quinoa Buddha Bowl", calories: 580, emoji: "🥙" },
+        { type: "Dinner", name: "Grilled Chicken & Sweet Potato", calories: 650, emoji: "🍗" },
+        { type: "Snack", name: "Mixed Nuts", calories: 200, emoji: "🥜" },
+      ],
+    },
+    {
+      day: "Thursday",
+      date: "2026-05-07",
+      totalCalories: 2090,
+      meals: [
+        { type: "Breakfast", name: "Avocado Toast & Eggs", calories: 440, emoji: "🥑" },
+        { type: "Lunch", name: "Lentil Soup", calories: 460, emoji: "🍲" },
+        { type: "Dinner", name: "Tuna Pasta", calories: 620, emoji: "🍝" },
+        { type: "Snack", name: "Cottage Cheese", calories: 140, emoji: "🧀" },
+      ],
+    },
+    {
+      day: "Friday",
+      date: "2026-05-08",
+      totalCalories: 2120,
+      meals: [
+        { type: "Breakfast", name: "Banana Pancakes", calories: 410, emoji: "🥞" },
+        { type: "Lunch", name: "Caesar Salad with Chicken", calories: 510, emoji: "🥗" },
+        { type: "Dinner", name: "Shrimp Tacos", calories: 680, emoji: "🌮" },
+        { type: "Snack", name: "Protein Bar", calories: 220, emoji: "🍫" },
+      ],
+    },
+    {
+      day: "Saturday",
+      date: "2026-05-09",
+      totalCalories: 2200,
+      meals: [
+        { type: "Breakfast", name: "Full English Breakfast", calories: 520, emoji: "🍳" },
+        { type: "Lunch", name: "Burger & Side Salad", calories: 620, emoji: "🍔" },
+        { type: "Dinner", name: "Grilled Steak & Veggies", calories: 750, emoji: "🥩" },
+        { type: "Snack", name: "Dark Chocolate", calories: 160, emoji: "🍫" },
+      ],
+    },
+    {
+      day: "Sunday",
+      date: "2026-05-10",
+      totalCalories: 2050,
+      meals: [
+        { type: "Breakfast", name: "Overnight Oats", calories: 380, emoji: "🥣" },
+        { type: "Lunch", name: "Vegetable Curry & Rice", calories: 540, emoji: "🍛" },
+        { type: "Dinner", name: "Baked Cod & Salad", calories: 580, emoji: "🐟" },
+        { type: "Snack", name: "Hummus & Veggies", calories: 170, emoji: "🥕" },
+      ],
+    },
+  ],
+};
+
+export async function generateWeeklyPlan(): Promise<MockWeeklyPlan> {
+  await new Promise((resolve) => setTimeout(resolve, 2500));
+  await AsyncStorage.setItem("weeklyPlan", JSON.stringify(MOCK_PLAN));
+  return MOCK_PLAN;
+}
 
 export interface GenerateMealPlanParams {
   goal: Goal;
@@ -9,32 +116,15 @@ export interface GenerateMealPlanParams {
   dietaryPreferences: DietaryPreference[];
 }
 
-export async function generateMealPlan(
-  _params: GenerateMealPlanParams
-): Promise<WeeklyPlan | null> {
-  return null;
-}
-
-export async function askNutritionQuestion(
-  _question: string
-): Promise<string> {
+export async function askNutritionQuestion(_question: string): Promise<string> {
   return "";
 }
 
 export async function isOllamaAvailable(): Promise<boolean> {
   try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
+    const response = await fetch("http://localhost:11434/api/tags");
     return response.ok;
   } catch {
     return false;
   }
 }
-
-export async function streamCompletion(
-  _prompt: string,
-  _onChunk: (text: string) => void
-): Promise<void> {
-  void _onChunk;
-}
-
-export { OLLAMA_BASE_URL, MODEL };
