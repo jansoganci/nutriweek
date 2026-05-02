@@ -293,6 +293,8 @@ export async function generateWeeklyPlan(
   let rawText: string;
   try {
     rawText = await askGemma(prompt);
+    // eslint-disable-next-line no-alert
+    alert("CEVAP: " + rawText.substring(0, 300));
   } catch (err) {
     console.error("Full error:", JSON.stringify(err));
     // Re-throw OLLAMA_OFFLINE / OLLAMA_TIMEOUT as-is for the UI to handle
