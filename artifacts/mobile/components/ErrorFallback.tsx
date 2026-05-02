@@ -69,12 +69,13 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
       ) : null}
 
       <View style={styles.content}>
+        <Text style={styles.rockyEmoji}>🦝</Text>
         <Text style={[styles.title, { color: colors.foreground }]}>
-          Something went wrong
+          Oops! Something went wrong.
         </Text>
 
         <Text style={[styles.message, { color: colors.mutedForeground }]}>
-          Please reload the app to continue.
+          Restart the app to get back on track 🦝
         </Text>
 
         <Pressable
@@ -186,6 +187,11 @@ const styles = StyleSheet.create({
     gap: 16,
     width: "100%",
     maxWidth: 600,
+  },
+  rockyEmoji: {
+    fontSize: 72,
+    textAlign: "center",
+    marginBottom: 8,
   },
   title: {
     fontSize: 28,

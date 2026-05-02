@@ -40,3 +40,42 @@ export async function isOnboardingComplete(): Promise<boolean> {
 export async function setOnboardingComplete(): Promise<void> {
   await AsyncStorage.setItem(KEYS.ONBOARDING_COMPLETE, "true");
 }
+
+export async function safeGetItem(key: string): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(key);
+  } catch (err) {
+    console.error(`[Storage] Failed to read "${key}":`, err);
+    return null;
+  }
+}
+
+export async function safeSetItem(key: string, value: string): Promise<boolean> {
+  try {
+    await AsyncStorage.setItem(key, value);
+    return true;
+  } catch (err) {
+    console.error(`[Storage] Failed to write "${key}":`, err);
+    return false;
+  }
+}
+
+export async function safeRemoveItem(key: string): Promise<boolean> {
+  try {
+    await AsyncStorage.removeItem(key);
+    return true;
+  } catch (err) {
+    console.error(`[Storage] Failed to remove "${key}":`, err);
+    return false;
+  }
+}
+
+export async function safeClearAll(): Promise<boolean> {
+  try {
+    await AsyncStorage.clear();
+    return true;
+  } catch (err) {
+    console.error("[Storage] Failed to clear storage:", err);
+    return false;
+  }
+}

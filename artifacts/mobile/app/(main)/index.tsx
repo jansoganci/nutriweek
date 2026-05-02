@@ -231,6 +231,27 @@ function EmptyState({ onGenerate }: EmptyStateProps) {
   );
 }
 
+type PlanError = "OLLAMA_OFFLINE" | "OLLAMA_TIMEOUT" | null;
+
+interface PlanErrorCardProps { error: PlanError; onRetry: () => void; }
+function PlanErrorCard({ error, onRetry }: PlanErrorCardProps) {
+  if (!error) return null;
+  const isOffline = error === "OLLAMA_OFFLINE";
+  return (
+    <View style={styles.planErrorCard}>
+      <Text style={styles.planErrorRocky}>{isOffline ? "😴" : "🦝"}</Text>
+      <Text style={styles.planErrorTitle}>
+        {isOffline
+          ? "Rocky is napping... Make sure Ollama is running on your Mac! 🦝💤"
+          : "Taking too long... Gemma is thinking hard! Try again? 🦝"}
+      </Text>
+      <Pressable style={styles.planErrorBtn} onPress={onRetry}>
+        <Text style={styles.planErrorBtnText}>Try Again</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 const ZERO_MACROS: ConsumedMacros = { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
 export default function MealPlanScreen() {
@@ -240,6 +261,7 @@ export default function MealPlanScreen() {
   const [weeklyPlan, setWeeklyPlan] = useState<MockWeeklyPlan | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [planError, setPlanError] = useState<PlanError>(null);
   const [showEmpty, setShowEmpty] = useState(false);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -276,13 +298,21 @@ export default function MealPlanScreen() {
   const handleGenerate = useCallback(async () => {
     setShowModal(false);
     setShowEmpty(false);
+    setPlanError(null);
     setIsGenerating(true);
     try {
       const plan = await generateWeeklyPlan();
       setWeeklyPlan(plan);
-    } catch {
-      Alert.alert("Oops!", "Rocky had trouble generating your plan. Try again!");
-      setShowEmpty(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg === "OLLAMA_OFFLINE") {
+        setPlanError("OLLAMA_OFFLINE");
+      } else if (msg === "OLLAMA_TIMEOUT") {
+        setPlanError("OLLAMA_TIMEOUT");
+      } else {
+        Alert.alert("Oops!", "Rocky had trouble generating your plan. Try again!");
+        setShowEmpty(true);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -345,7 +375,11 @@ export default function MealPlanScreen() {
 
         {isGenerating && <LoadingState />}
 
-        {!isGenerating && weeklyPlan && (
+        {!isGenerating && planError && (
+          <PlanErrorCard error={planError} onRetry={handleGenerate} />
+        )}
+
+        {!isGenerating && !planError && weeklyPlan && (
           <View style={styles.dayList}>
             {weeklyPlan.days.map((day) => (
               <DayCard
@@ -359,7 +393,7 @@ export default function MealPlanScreen() {
           </View>
         )}
 
-        {!isGenerating && !weeklyPlan && loaded && showEmpty && (
+        {!isGenerating && !planError && !weeklyPlan && loaded && showEmpty && (
           <EmptyState onGenerate={() => setShowModal(true)} />
         )}
       </ScrollView>
@@ -733,6 +767,41 @@ const styles = StyleSheet.create({
   modalSecondaryText: {
     color: C.text,
     fontSize: 15,
+  },
+
+  // Plan error card
+  planErrorCard: {
+    backgroundColor: C.card,
+    borderRadius: 18,
+    padding: 28,
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: C.destructiveLight,
+    ...CARD_SHADOW,
+  },
+  planErrorRocky: {
+    fontSize: 56,
+    marginBottom: 4,
+  },
+  planErrorTitle: {
+    fontSize: 15,
+    color: C.text,
+    textAlign: "center",
+    lineHeight: 22,
+    fontWeight: "500" as const,
+  },
+  planErrorBtn: {
+    backgroundColor: C.primary,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    marginTop: 4,
+  },
+  planErrorBtnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700" as const,
   },
 
   // FAB

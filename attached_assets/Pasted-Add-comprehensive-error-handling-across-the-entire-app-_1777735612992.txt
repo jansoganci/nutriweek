@@ -1,0 +1,63 @@
+Add comprehensive error handling across the entire app. 
+Do all of this in one go.
+
+1. NETWORK ERROR HANDLING in `services/usda.ts`:
+- Wrap all fetch calls in try/catch
+- If network error: throw new Error("NETWORK_ERROR")
+- If API returns non-200: throw new Error("API_ERROR")
+- If no results: return empty array (not an error)
+
+2. UPDATE `app/(main)/log.tsx`:
+- If USDA search fails with NETWORK_ERROR:
+  Show inline error below search bar:
+  Rocky 🦝 + "No internet connection. Check your WiFi! 🦝📡"
+  Retry button that re-triggers the search
+- If search fails with API_ERROR:
+  "Something went wrong. Try again! 🦝"
+- If user enters 0 or negative grams in portion modal:
+  Shake the input field + show "Please enter a valid amount 🦝"
+- If user enters more than 5000 grams:
+  "That's a lot... are you sure? 🦝😅" with confirm/cancel
+
+3. OLLAMA ERROR HANDLING in `services/gemma.ts`:
+- Wrap fetch call in try/catch
+- If connection refused (Ollama not running):
+  throw new Error("OLLAMA_OFFLINE")
+- If timeout after 60 seconds:
+  throw new Error("OLLAMA_TIMEOUT")
+
+4. UPDATE `app/(main)/index.tsx`:
+- If generateWeeklyPlan() fails with OLLAMA_OFFLINE:
+  Show error card instead of loading state:
+  Rocky sleeping 😴 + "Rocky is napping... Make sure Ollama is running on your Mac! 🦝💤"
+  "Try Again" button
+- If OLLAMA_TIMEOUT:
+  Rocky 🦝 + "Taking too long... Gemma is thinking hard! Try again?"
+  "Try Again" button
+
+5. ASYNCSTORAGE ERROR HANDLING in `services/storage.ts`:
+- Wrap all getItem/setItem in try/catch
+- If read fails: return null (graceful fallback)
+- If write fails: console.error + show toast "Couldn't save data. Storage might be full! 🦝"
+
+6. PROFILE SAVE VALIDATION in `app/(main)/profile.tsx`:
+- Age: must be between 10-120
+- Height: must be between 50-300 cm
+- Weight: must be between 20-500 kg
+- If invalid: highlight field in red + show error message below field
+- Do not save until all validations pass
+
+7. GLOBAL ERROR BOUNDARY:
+- Add a simple error boundary component in `components/ErrorBoundary.tsx`
+- If any screen crashes: show Rocky 🦝 + "Oops! Something went wrong. Restart the app 🦝"
+- Wrap main tab screens with this boundary
+
+8. TOAST/SNACKBAR COMPONENT:
+- Create `components/Toast.tsx`
+- Simple animated toast that appears at bottom of screen
+- Auto-dismisses after 3 seconds
+- Types: success (green), error (red), warning (orange)
+- Use this for: save success, delete confirmation, error messages
+- Rocky emoji prefix on all toasts
+
+Do all 8 items. Confirm each one as you complete it.

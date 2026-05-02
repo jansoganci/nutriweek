@@ -50,9 +50,15 @@ export async function searchFoods(query: string): Promise<FoodSearchResult[]> {
     `?query=${encodeURIComponent(query.trim())}` +
     `&pageSize=20`;
 
-  const response = await fetch(url);
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch {
+    throw new Error("NETWORK_ERROR");
+  }
+
   if (!response.ok) {
-    throw new Error(`Food search error ${response.status}`);
+    throw new Error("API_ERROR");
   }
 
   const data = (await response.json()) as { foods?: Record<string, unknown>[] };

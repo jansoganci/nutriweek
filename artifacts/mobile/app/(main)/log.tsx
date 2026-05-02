@@ -244,11 +244,54 @@ interface PortionModalProps {
 }
 function PortionModal({ food, visible, onClose, onLog }: PortionModalProps) {
   const [grams, setGrams] = useState("100");
+  const [gramsError, setGramsError] = useState("");
+  const shakeAnim = useRef(new Animated.Value(0)).current;
   const preview = food ? calculateNutrients(food, Number(grams) || 0) : null;
 
   useEffect(() => {
-    if (visible) setGrams("100");
+    if (visible) { setGrams("100"); setGramsError(""); }
   }, [visible]);
+
+  function shake() {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
+  }
+
+  function handleLogPress() {
+    if (!preview) return;
+    const g = Number(grams) || 0;
+    if (g <= 0) {
+      setGramsError("Please enter a valid amount 🦝");
+      shake();
+      return;
+    }
+    if (g > 5000) {
+      Alert.alert(
+        "That's a lot... 🦝😅",
+        "Are you sure you want to log more than 5kg of this food?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Yes, log it",
+            onPress: () => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              onLog(g, preview);
+            },
+          },
+        ]
+      );
+      return;
+    }
+    setGramsError("");
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    onLog(g, preview);
+  }
 
   if (!food) return null;
 
@@ -265,14 +308,17 @@ function PortionModal({ food, visible, onClose, onLog }: PortionModalProps) {
             {food.description}
           </Text>
           <Text style={styles.modalLabel}>Amount in grams</Text>
-          <TextInput
-            style={styles.gramsInput}
-            value={grams}
-            onChangeText={(v) => setGrams(v.replace(/[^0-9.]/g, ""))}
-            keyboardType="decimal-pad"
-            selectTextOnFocus
-            placeholderTextColor={C.textTertiary}
-          />
+          <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+            <TextInput
+              style={[styles.gramsInput, gramsError ? { borderColor: C.destructive } : {}]}
+              value={grams}
+              onChangeText={(v) => { setGrams(v.replace(/[^0-9.]/g, "")); setGramsError(""); }}
+              keyboardType="decimal-pad"
+              selectTextOnFocus
+              placeholderTextColor={C.textTertiary}
+            />
+          </Animated.View>
+          {gramsError ? <Text style={styles.gramsErrorText}>{gramsError}</Text> : null}
           {preview && (
             <View style={styles.previewCard}>
               <Text style={styles.previewTitle}>For {grams || "0"}g:</Text>
@@ -295,11 +341,7 @@ function PortionModal({ food, visible, onClose, onLog }: PortionModalProps) {
           )}
           <Pressable
             style={styles.logBtn}
-            onPress={() => {
-              if (!preview) return;
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              onLog(Number(grams) || 0, preview);
-            }}
+            onPress={handleLogPress}
           >
             <Text style={styles.logBtnText}>Add to Today 🦝</Text>
           </Pressable>
@@ -380,6 +422,7 @@ export default function LogScreen() {
   const [results, setResults] = useState<FoodSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [searchError, setSearchError] = useState<"NETWORK_ERROR" | "API_ERROR" | null>(null);
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null);
   const [showPortionModal, setShowPortionModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -428,15 +471,20 @@ export default function LogScreen() {
     if (!q.trim()) {
       setResults([]);
       setHasSearched(false);
+      setSearchError(null);
       return;
     }
     setIsSearching(true);
     setHasSearched(true);
+    setSearchError(null);
     try {
       const data = await searchFoods(q);
       setResults(data);
-    } catch {
+    } catch (err) {
       setResults([]);
+      const msg = err instanceof Error ? err.message : "";
+      if (msg === "NETWORK_ERROR") setSearchError("NETWORK_ERROR");
+      else setSearchError("API_ERROR");
     } finally {
       setIsSearching(false);
     }
@@ -558,8 +606,28 @@ export default function LogScreen() {
           )}
         </View>
 
-        {showEmpty && <EmptyState onPillPress={handlePillPress} />}
-        {showNoResults && <NoResultsState />}
+        {/* Search errors */}
+        {searchError === "NETWORK_ERROR" && (
+          <View style={styles.searchErrorCard}>
+            <Text style={styles.searchErrorEmoji}>🦝📡</Text>
+            <Text style={styles.searchErrorText}>No internet connection. Check your WiFi! 🦝📡</Text>
+            <Pressable style={styles.retryBtn} onPress={() => runSearch(query)}>
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
+        {searchError === "API_ERROR" && (
+          <View style={styles.searchErrorCard}>
+            <Text style={styles.searchErrorEmoji}>🦝</Text>
+            <Text style={styles.searchErrorText}>Something went wrong. Try again! 🦝</Text>
+            <Pressable style={styles.retryBtn} onPress={() => runSearch(query)}>
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {!searchError && showEmpty && <EmptyState onPillPress={handlePillPress} />}
+        {!searchError && showNoResults && <NoResultsState />}
 
         {results.length > 0 && (
           <View style={styles.resultsList}>
@@ -733,6 +801,43 @@ const styles = StyleSheet.create({
   },
   macroTagText: { fontSize: 12, fontWeight: "700" as const },
   macroTagLabel: { fontSize: 11, color: C.textSecondary },
+
+  // Search error
+  searchErrorCard: {
+    alignItems: "center",
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    gap: 8,
+    backgroundColor: C.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  searchErrorEmoji: { fontSize: 36 },
+  searchErrorText: {
+    fontSize: 14,
+    color: C.text,
+    fontWeight: "500" as const,
+    textAlign: "center",
+  },
+  retryBtn: {
+    marginTop: 4,
+    backgroundColor: C.primary,
+    borderRadius: 99,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+  retryBtnText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600" as const,
+  },
+  gramsErrorText: {
+    fontSize: 13,
+    color: C.destructive,
+    textAlign: "center",
+    marginTop: -6,
+  },
 
   // Results list
   resultsList: { gap: 10 },

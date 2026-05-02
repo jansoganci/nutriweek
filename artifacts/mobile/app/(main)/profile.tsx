@@ -168,6 +168,7 @@ export default function ProfileScreen() {
   const [toastMsg, setToastMsg] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
   const toastKey = useRef(0);
+  const [fieldErrors, setFieldErrors] = useState<{ age?: string; height?: string; weight?: string }>({});
 
   function showToast(msg: string) {
     toastKey.current += 1;
@@ -211,17 +212,33 @@ export default function ProfileScreen() {
 
   const handleSaveInfo = useCallback(async () => {
     if (!profile) return;
-    const { age, gender, height, weight, activityLevel } = infoFieldsDraft;
-    if (!age || !gender || !height || !weight || !activityLevel) {
-      Alert.alert("Validation", "All fields are required.");
+    const { gender, activityLevel } = infoFieldsDraft;
+    const ageNum = Number(infoFieldsDraft.age);
+    const heightNum = Number(infoFieldsDraft.height);
+    const weightNum = Number(infoFieldsDraft.weight);
+
+    const errors: { age?: string; height?: string; weight?: string } = {};
+    if (!infoFieldsDraft.age || isNaN(ageNum) || ageNum < 10 || ageNum > 120)
+      errors.age = "Age must be between 10 and 120";
+    if (!infoFieldsDraft.height || isNaN(heightNum) || heightNum < 50 || heightNum > 300)
+      errors.height = "Height must be between 50 and 300 cm";
+    if (!infoFieldsDraft.weight || isNaN(weightNum) || weightNum < 20 || weightNum > 500)
+      errors.weight = "Weight must be between 20 and 500 kg";
+    if (!gender || !activityLevel) {
+      Alert.alert("Validation", "Gender and activity level are required.");
       return;
     }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
     const updated: UserProfile = {
       ...profile,
-      age: Number(age),
+      age: ageNum,
       gender: gender as UserProfile["gender"],
-      height: Number(height),
-      weight: Number(weight),
+      height: heightNum,
+      weight: weightNum,
       activityLevel: activityLevel as ActivityLevel,
       updatedAt: new Date().toISOString(),
     };

@@ -105,7 +105,54 @@ const MOCK_PLAN: MockWeeklyPlan = {
 };
 
 export async function generateWeeklyPlan(): Promise<MockWeeklyPlan> {
-  await new Promise((resolve) => setTimeout(resolve, 2500));
+  const TIMEOUT_MS = 60_000;
+
+  const ollamaCheck = await Promise.race<boolean>([
+    fetch("http://localhost:11434/api/tags")
+      .then((r) => r.ok)
+      .catch(() => false),
+    new Promise<boolean>((resolve) =>
+      setTimeout(() => resolve(false), 5_000)
+    ),
+  ]);
+
+  if (!ollamaCheck) {
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("OLLAMA_TIMEOUT")), TIMEOUT_MS)
+    );
+    const planGeneration = (async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      await AsyncStorage.setItem("weeklyPlan", JSON.stringify(MOCK_PLAN));
+      return MOCK_PLAN;
+    })();
+
+    try {
+      return await Promise.race([planGeneration, timeout]);
+    } catch (err) {
+      if (err instanceof Error && err.message === "OLLAMA_TIMEOUT") {
+        throw err;
+      }
+      throw new Error("OLLAMA_OFFLINE");
+    }
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const resp = await fetch("http://localhost:11434/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "gemma", prompt: "Generate a weekly meal plan." }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!resp.ok) throw new Error("OLLAMA_OFFLINE");
+  } catch (err) {
+    if (err instanceof Error && err.message === "OLLAMA_TIMEOUT") throw err;
+    if (err instanceof Error && err.name === "AbortError") throw new Error("OLLAMA_TIMEOUT");
+    throw new Error("OLLAMA_OFFLINE");
+  }
+
   await AsyncStorage.setItem("weeklyPlan", JSON.stringify(MOCK_PLAN));
   return MOCK_PLAN;
 }
