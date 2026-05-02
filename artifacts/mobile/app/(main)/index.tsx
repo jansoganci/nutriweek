@@ -213,7 +213,7 @@ function DayCard({ day, isToday, isExpanded, onToggle }: DayCardProps) {
 
       <View style={styles.mealsContainer}>
         {shownMeals.map((meal, i) => (
-          <View key={i}>
+          <View key={meal.type + "-" + meal.name + "-" + i}>
             {i > 0 && <View style={styles.mealDivider} />}
             <MealRow meal={meal} />
           </View>
@@ -474,9 +474,9 @@ export default function MealPlanScreen() {
 
         {!isGenerating && !planError && weeklyPlan && (
           <View style={styles.dayList}>
-            {weeklyPlan.days.map((day) => (
+            {weeklyPlan.days.map((day, dayIndex) => (
               <DayCard
-                key={day.date}
+                key={day.date || String(dayIndex)}
                 day={day}
                 isToday={day.date === today}
                 isExpanded={expandedDay === day.date}
