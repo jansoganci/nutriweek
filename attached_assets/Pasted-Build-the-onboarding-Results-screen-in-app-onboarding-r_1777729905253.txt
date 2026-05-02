@@ -1,0 +1,80 @@
+Build the onboarding Results screen in `app/(onboarding)/results.tsx`.
+
+This screen is the payoff moment — Rocky celebrates, user sees their stats.
+Keep it visual, exciting, and friendly. No back button here.
+
+DESIGN:
+- Background: #FAFAFA
+- ScrollView, full screen
+- Rocky mascot 🦝 at top, big, celebrating
+- Rocky speech bubble: "Your plan is ready! Let's do this! 🦝🎉"
+- Cards for each stat section
+- Big orange CTA button at bottom
+
+LAYOUT (top to bottom):
+
+1. ROCKY CELEBRATION SECTION
+- Large Rocky emoji 🦝 centered
+- Confetti effect if possible (just use emoji ✨🎊 around Rocky if no library)
+- Speech bubble with celebration message
+
+2. BMI CARD
+- Title: "Your BMI"
+- Large number (e.g. "24.3")
+- Color coded label below the number:
+  - Under 18.5: "Underweight" — #FFB300
+  - 18.5-24.9: "Healthy" — #4CAF50
+  - 25-29.9: "Overweight" — #FFB300
+  - 30+: "Obese" — #FF4444
+- Horizontal bar showing where user falls on BMI scale
+- White card, subtle shadow
+
+3. DAILY TARGETS CARD
+- Title: "Your Daily Targets"
+- 4 rows:
+  - 🔥 Calories: [number] kcal
+  - 🥩 Protein: [number] g
+  - 🍚 Carbs: [number] g
+  - 🥑 Fat: [number] g
+- Each row: emoji + label on left, bold number on right
+- White card, subtle shadow
+
+4. MACRO SPLIT CARD
+- Title: "Macro Split"
+- 3 horizontal colored bars showing percentages:
+  - Protein: #FF6B35 (orange)
+  - Carbs: #4CAF50 (green)
+  - Fat: #FFB300 (amber)
+- Each bar: label + percentage + grams
+- White card, subtle shadow
+
+5. GOAL SUMMARY CARD
+- Title: "Your Goal"
+- Show selected goal with icon and description:
+  - Cut: "🔥 Lose Fat — 500 kcal daily deficit"
+  - Bulk: "💪 Build Muscle — 300 kcal daily surplus"  
+  - Maintain: "⚖️ Stay Balanced — eating at maintenance"
+- White card, subtle shadow
+
+6. CTA BUTTON
+- Full width, #FF6B35, white text
+- Text: "Let's Start! 🦝"
+- On press: navigate to /(main)/index
+- Large, rounded, satisfying
+
+DATA:
+- Read full userProfile from AsyncStorage key "userProfile"
+- For now use PLACEHOLDER calculations (hardcoded fake numbers):
+  - BMI: 24.3
+  - Calories: 2100
+  - Protein: 157g
+  - Carbs: 236g
+  - Fat: 58g
+- We will wire real calculations in the next step
+- Add a comment in code: // TODO: replace with real calculations from services/calculations.ts
+
+ROCKY MESSAGES based on BMI:
+- Healthy: "Looking good! Now let's eat right 🦝✨"
+- Underweight: "We'll get you fueled up properly! 🦝💪"
+- Overweight: "No worries, Rocky's got your back! 🦝❤️"
+- Obese: "Every journey starts with one step. Let's go! 🦝🌟"

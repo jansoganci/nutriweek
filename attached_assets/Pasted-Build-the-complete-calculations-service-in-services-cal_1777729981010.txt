@@ -1,0 +1,79 @@
+Build the complete calculations service in `services/calculations.ts`.
+
+This file contains all health and nutrition calculations. No UI, pure logic only.
+
+IMPLEMENT THESE FUNCTIONS:
+
+1. calculateBMI(weight: number, height: number): number
+   Formula: weight / ((height / 100) ** 2)
+   Round to 1 decimal place
+
+2. getBMICategory(bmi: number): { label: string, color: string }
+   - Under 18.5: { label: "Underweight", color: "#FFB300" }
+   - 18.5-24.9: { label: "Healthy", color: "#4CAF50" }
+   - 25-29.9: { label: "Overweight", color: "#FFB300" }
+   - 30+: { label: "Obese", color: "#FF4444" }
+
+3. calculateBMR(weight: number, height: number, age: number, gender: string): number
+   Mifflin-St Jeor formula:
+   - Male: (10 × weight) + (6.25 × height) - (5 × age) + 5
+   - Female: (10 × weight) + (6.25 × height) - (5 × age) - 161
+   - Other: average of male and female results
+   Round to nearest integer
+
+4. getActivityMultiplier(activityLevel: string): number
+   - "sedentary": 1.2
+   - "lightly_active": 1.375
+   - "moderately_active": 1.55
+   - "very_active": 1.725
+   - "extra_active": 1.9
+
+5. calculateTDEE(bmr: number, activityLevel: string): number
+   Formula: bmr × getActivityMultiplier(activityLevel)
+   Round to nearest integer
+
+6. calculateTargetCalories(tdee: number, goal: string): number
+   - "cut": tdee - 500
+   - "bulk": tdee + 300
+   - "maintain": tdee
+
+7. calculateMacros(targetCalories: number, weight: number, goal: string): { protein: number, carbs: number, fat: number }
+   
+   Protein calculation (FDA + sports science based):
+   - Cut: weight × 2.2 (high protein to preserve muscle)
+   - Bulk: weight × 2.0 (high protein to build muscle)
+   - Maintain: weight × 1.8
+
+   Fat calculation (25% of total calories):
+   - fat grams = (targetCalories × 0.25) / 9
+   
+   Carbs calculation (remaining calories):
+   - proteinCalories = protein × 4
+   - fatCalories = fat × 9
+   - carbCalories = targetCalories - proteinCalories - fatCalories
+   - carbs = carbCalories / 4
+
+   Round all to nearest integer
+
+8. calculateAll(profile: UserProfile): CalculationResults
+   This is the MAIN function that takes full UserProfile and returns everything.
+   
+   Returns CalculationResults object:
+   {
+     bmi: number,
+     bmiCategory: { label: string, color: string },
+     bmr: number,
+     tdee: number,
+     targetCalories: number,
+     macros: { protein: number, carbs: number, fat: number },
+     macroPercentages: { protein: number, carbs: number, fat: number }
+   }
+
+   macroPercentages calculation:
+   - protein%: (protein × 4 / targetCalories) × 100
+   - carbs%: (carbs × 4 / targetCalories) × 100
+   - fat%: (fat × 9 / targetCalories) × 100
+   Round percentages to 1 decimal
+
+Export all functions individually AND export calculateAll as default.
+Add JSDoc comments to each function explaining the formula source.
