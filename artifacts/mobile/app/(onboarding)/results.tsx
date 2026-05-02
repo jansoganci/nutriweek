@@ -191,17 +191,7 @@ export default function ResultsScreen() {
     >
       {/* Rocky celebration */}
       <View style={styles.celebrationWrap}>
-        <View style={styles.confettiRow}>
-          <Text style={styles.confetti}>✨</Text>
-          <Text style={styles.confetti}>🎊</Text>
-          <Text style={styles.confetti}>✨</Text>
-        </View>
         <RockyMascot mood="celebrating" size={88} message={rockyMessage} />
-        <View style={styles.confettiRow}>
-          <Text style={styles.confetti}>🎉</Text>
-          <Text style={styles.confetti}>✨</Text>
-          <Text style={styles.confetti}>🎊</Text>
-        </View>
       </View>
 
       <Text style={styles.headline}>Your plan is ready!</Text>
