@@ -1,0 +1,41 @@
+Build the onboarding Step 1 screen in `app/(onboarding)/step1.tsx`.
+
+This screen collects basic user information. It must feel friendly, minimal, and fun — Rocky the raccoon 🦝 is at the top with a welcome message.
+
+DESIGN:
+- Background: #FAFAFA
+- All inputs are clean card-style pickers/inputs on #FFFFFF cards with subtle shadow
+- Accent color #FF6B35 for selected states and the continue button
+- SF Pro Rounded feel — use fontWeight "700" for headings
+- StepProgress component at top showing step 1 of 4
+- Rocky mascot at top with speech bubble saying: "Hey! I'm Rocky 🦝 Let's build your perfect meal plan!"
+
+FIELDS (in this order):
+1. Gender — horizontal pill selector: Male / Female / Other
+2. Age — numeric input, keyboard type number, placeholder "25"
+3. Height — numeric input in cm, placeholder "175"
+4. Weight — numeric input in kg, placeholder "70"
+5. Activity Level — vertical list of 5 selectable cards:
+   - Sedentary (little or no exercise)
+   - Lightly Active (1-3 days/week)
+   - Moderately Active (3-5 days/week)
+   - Very Active (6-7 days/week)
+   - Extra Active (physical job or 2x/day)
+
+BEHAVIOR:
+- All fields required before Continue button activates
+- Continue button stays gray (#CCCCCC) until all fields filled
+- When all filled, Continue button turns #FF6B35 with white text
+- On Continue: save data to AsyncStorage using storage.ts, navigate to step2
+- Show validation: if user taps Continue with empty fields, shake the empty fields gently (use Animated)
+
+ROCKY BEHAVIOR:
+- Default message: "Hey! I'm Rocky 🦝 Let's build your perfect meal plan!"
+- When activity level is selected: Rocky says something fun based on selection
+  - Sedentary: "No worries, we all start somewhere! 🦝"
+  - Extra Active: "Wow, you're a machine! 🦝💪"
+  - Others: "Nice! I like your style 🦝"
+
+Use ScrollView so content doesn't get cut off on smaller screens.
+Save this data shape to AsyncStorage key "userProfile" (partial save, merge with existing):
+{ gender, age, height, weight, activityLevel }
