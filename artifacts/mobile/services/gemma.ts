@@ -29,7 +29,7 @@ export interface MockWeeklyPlan {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const OLLAMA_BASE_URL = "https://ed75-94-55-148-34.ngrok-free.app";
+const OLLAMA_BASE_URL = "https://ba93-94-55-148-34.ngrok-free.app";
 const MODEL = "gemma4:e4b";
 const TIMEOUT_MS = 120_000;
 
