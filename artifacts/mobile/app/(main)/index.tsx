@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -19,6 +19,7 @@ import colors from "@/constants/colors";
 import type { UserProfile } from "@/constants/types";
 import calculateAll, { type CalculationResults } from "@/services/calculations";
 import { generateWeeklyPlan, type MockWeeklyPlan, type MockDayPlan } from "@/services/gemma";
+import { loadTodayLog, sumMacros } from "@/services/usda";
 
 const C = colors.light;
 
@@ -82,26 +83,36 @@ function FirstLaunchModal({ visible, onGenerate, onDismiss }: FirstLaunchModalPr
   );
 }
 
+interface ConsumedMacros { calories: number; protein: number; carbs: number; fat: number; }
+
 interface MacroSummaryCardProps {
   targets: CalculationResults | null;
+  consumed: ConsumedMacros;
 }
-function MacroSummaryCard({ targets }: MacroSummaryCardProps) {
-  const calories = targets?.targetCalories ?? 0;
-  const protein = targets?.macros.protein ?? 0;
-  const carbs = targets?.macros.carbs ?? 0;
-  const fat = targets?.macros.fat ?? 0;
+function MacroSummaryCard({ targets, consumed }: MacroSummaryCardProps) {
+  const targetCals = targets?.targetCalories ?? 0;
+  const targetProtein = targets?.macros.protein ?? 0;
+  const targetCarbs = targets?.macros.carbs ?? 0;
+  const targetFat = targets?.macros.fat ?? 0;
+
+  const remaining = targetCals - consumed.calories;
+  const remainingText = targetCals === 0
+    ? "Complete onboarding to see targets"
+    : remaining >= 0
+      ? `${remaining} kcal remaining`
+      : `${Math.abs(remaining)} kcal over target 🦝😅`;
 
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>Today's Progress</Text>
       <View style={styles.macroRingRow}>
-        <MacroRing label="Calories" current={0} target={calories} unit="kcal" color={C.primary} size={72} strokeWidth={7} />
-        <MacroRing label="Protein" current={0} target={protein} unit="g" color={C.macroProtein} size={72} strokeWidth={7} />
-        <MacroRing label="Carbs" current={0} target={carbs} unit="g" color="#2196F3" size={72} strokeWidth={7} />
-        <MacroRing label="Fat" current={0} target={fat} unit="g" color={C.macroFat} size={72} strokeWidth={7} />
+        <MacroRing label="Calories" current={consumed.calories} target={targetCals} unit="kcal" color={C.primary} size={72} strokeWidth={7} />
+        <MacroRing label="Protein" current={consumed.protein} target={targetProtein} unit="g" color={C.macroProtein} size={72} strokeWidth={7} />
+        <MacroRing label="Carbs" current={consumed.carbs} target={targetCarbs} unit="g" color="#2196F3" size={72} strokeWidth={7} />
+        <MacroRing label="Fat" current={consumed.fat} target={targetFat} unit="g" color={C.macroFat} size={72} strokeWidth={7} />
       </View>
-      <Text style={styles.remainingText}>
-        {calories > 0 ? `${calories} kcal remaining` : "Complete onboarding to see targets"}
+      <Text style={[styles.remainingText, remaining < 0 && targetCals > 0 && { color: C.destructive }]}>
+        {remainingText}
       </Text>
     </View>
   );
@@ -220,9 +231,12 @@ function EmptyState({ onGenerate }: EmptyStateProps) {
   );
 }
 
+const ZERO_MACROS: ConsumedMacros = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
 export default function MealPlanScreen() {
   const insets = useSafeAreaInsets();
   const [targets, setTargets] = useState<CalculationResults | null>(null);
+  const [consumed, setConsumed] = useState<ConsumedMacros>(ZERO_MACROS);
   const [weeklyPlan, setWeeklyPlan] = useState<MockWeeklyPlan | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -250,6 +264,14 @@ export default function MealPlanScreen() {
     }
     init();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTodayLog().then((entries) => {
+        setConsumed(sumMacros(entries));
+      });
+    }, [])
+  );
 
   const handleGenerate = useCallback(async () => {
     setShowModal(false);
@@ -305,7 +327,7 @@ export default function MealPlanScreen() {
         </View>
 
         {/* Macro Summary */}
-        {loaded && <MacroSummaryCard targets={targets} />}
+        {loaded && <MacroSummaryCard targets={targets} consumed={consumed} />}
 
         {/* Weekly Plan Section */}
         <View style={styles.sectionHeader}>

@@ -1,0 +1,118 @@
+Build the food search and logging service and screen.
+
+STEP 1 — Create `services/usda.ts`:
+
+USDA FoodData Central API integration.
+Base URL: https://api.nal.usda.gov/fdc/v1
+API Key: [buraya kendi API key'ini yaz]
+
+Implement these functions:
+
+1. searchFoods(query: string): Promise<FoodSearchResult[]>
+   GET /foods/search?query={query}&api_key={KEY}&pageSize=20&dataType=Foundation,SR Legacy
+   
+   Parse response and return array of:
+   {
+     fdcId: number,
+     description: string,
+     calories: number,      // nutrientId 1008
+     protein: number,       // nutrientId 1003
+     carbs: number,         // nutrientId 1005
+     fat: number,           // nutrientId 1004
+     servingSize: number,   // per 100g default
+   }
+
+   Nutrient ID mapping:
+   - 1008 = Energy (kcal)
+   - 1003 = Protein (g)
+   - 1004 = Total Fat (g)
+   - 1005 = Carbohydrate (g)
+
+   All values are per 100g. We will calculate based on user portion input.
+
+2. calculateNutrients(food: FoodSearchResult, grams: number): MacroResult
+   Formula: (value / 100) * grams
+   Returns: { calories, protein, carbs, fat } for given gram amount
+
+STEP 2 — Build `app/(main)/log.tsx`:
+
+Full screen food logging screen.
+
+LAYOUT:
+
+1. HEADER
+- Title: "Quick Log 🦝"
+- Back button (navigate back)
+- Rocky speech bubble: "What did you eat? 🦝🍽️"
+
+2. SEARCH SECTION
+- Search input — full width, rounded, white card
+- Placeholder: "Search food... (e.g. chicken breast)"
+- Search triggers on each keystroke with 500ms debounce
+- Loading spinner while searching
+- Clear button (x) when text is entered
+
+3. SEARCH RESULTS LIST
+- Each result is a tappable card:
+  - Food name (bold)
+  - Per 100g: calories | protein | carbs | fat (small text, gray)
+- On tap: open portion input modal
+
+4. PORTION INPUT MODAL (bottom sheet style)
+- Food name at top (bold, large)
+- Input field: "Amount in grams" — numeric keyboard
+- Default value: 100
+- Live preview updates as user types:
+  "For [X]g:"
+  🔥 [calories] kcal
+  🥩 [protein]g protein
+  🍚 [carbs]g carbs
+  🥑 [fat]g fat
+- Rocky says: "Looks delicious! 🦝😋"
+- Two buttons:
+  - "Add to Today 🦝" — #FF6B35, primary
+  - "Cancel" — text only
+
+5. ON "Add to Today":
+- Calculate nutrients for entered grams using calculateNutrients()
+- Create MealEntry object:
+  {
+    id: Date.now().toString(),
+    foodName: string,
+    grams: number,
+    calories: number,
+    protein: number,
+    carbs: number,
+    fat: number,
+    loggedAt: new Date().toISOString(),
+    date: today's date as YYYY-MM-DD
+  }
+- Load existing today's log from AsyncStorage key "dailyLog_{YYYY-MM-DD}"
+- Append new entry
+- Save back to AsyncStorage
+- Show success: Rocky animation + "Logged! 🦝✅" message
+- Navigate back to home screen
+- Home screen macro rings should update (use useFocusEffect to refresh)
+
+EMPTY STATE (no search yet):
+- Rocky 🦝 centered
+- Text: "Search for any food above!"
+- Below: quick suggestion pills (tappable):
+  - 🍗 Chicken Breast
+  - 🥚 Eggs
+  - 🍌 Banana
+  - 🥛 Milk
+  - 🍚 Rice
+  - 🥑 Avocado
+  Tapping a pill fills the search bar and triggers search
+
+NO RESULTS STATE:
+- Rocky 🦝 with confused face
+- Text: "Hmm, couldn't find that one 🦝"
+- Subtitle: "Try different keywords"
+
+STEP 3 — Update `app/(main)/index.tsx`:
+- Add useFocusEffect that re-reads today's daily log from AsyncStorage
+- Calculate consumed macros from daily log entries
+- Update MacroRing components with real consumed values
+- Show "X kcal remaining" or "X kcal over target 🦝😅"
