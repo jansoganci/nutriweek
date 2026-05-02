@@ -97,6 +97,12 @@ export async function appendLogEntry(entry: LogEntry): Promise<void> {
   await AsyncStorage.setItem(getTodayKey(), JSON.stringify([...existing, entry]));
 }
 
+export async function removeLogEntry(id: string): Promise<void> {
+  const existing = await loadTodayLog();
+  const updated = existing.filter((e) => e.id !== id);
+  await AsyncStorage.setItem(getTodayKey(), JSON.stringify(updated));
+}
+
 export function sumMacros(entries: LogEntry[]): MacroResult {
   return entries.reduce(
     (acc, e) => ({

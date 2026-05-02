@@ -1,8 +1,9 @@
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   KeyboardAvoidingView,
   Modal,
@@ -20,8 +21,12 @@ import colors from "@/constants/colors";
 import {
   appendLogEntry,
   calculateNutrients,
+  loadTodayLog,
+  removeLogEntry,
   searchFoods,
+  sumMacros,
   type FoodSearchResult,
+  type LogEntry,
   type MacroResult,
 } from "@/services/usda";
 
@@ -44,6 +49,17 @@ const CARD_SHADOW = {
   elevation: 2,
 };
 
+function formatTodayDate(): string {
+  const now = new Date();
+  return now.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+// ─── Macro tag (search results) ──────────────────────────────────────────────
+
 function MacroTag({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <View style={[styles.macroTag, { backgroundColor: color + "18" }]}>
@@ -53,14 +69,160 @@ function MacroTag({ label, value, color }: { label: string; value: string; color
   );
 }
 
+// ─── Summary macro card (log modal) ──────────────────────────────────────────
+
+function SummaryCard({
+  emoji,
+  label,
+  value,
+  unit,
+  color,
+}: {
+  emoji: string;
+  label: string;
+  value: number;
+  unit: string;
+  color: string;
+}) {
+  return (
+    <View style={[styles.summaryCard, { borderTopColor: color, borderTopWidth: 3 }]}>
+      <Text style={styles.summaryEmoji}>{emoji}</Text>
+      <Text style={[styles.summaryValue, { color }]}>{value}</Text>
+      <Text style={styles.summaryUnit}>{unit}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
+    </View>
+  );
+}
+
+// ─── Log entry row (log modal) ────────────────────────────────────────────────
+
+function LogEntryRow({
+  entry,
+  onDelete,
+}: {
+  entry: LogEntry;
+  onDelete: (entry: LogEntry) => void;
+}) {
+  return (
+    <View style={styles.logEntryCard}>
+      <View style={styles.logEntryMain}>
+        <Text style={styles.logEntryName} numberOfLines={2}>
+          {entry.foodName}
+        </Text>
+        <Text style={styles.logEntryGrams}>{entry.grams}g</Text>
+        <Text style={styles.logEntryMacros}>
+          🥩 {entry.protein}g · 🍚 {entry.carbs}g · 🥑 {entry.fat}g
+        </Text>
+      </View>
+      <View style={styles.logEntryRight}>
+        <Text style={styles.logEntryCals}>{entry.calories}</Text>
+        <Text style={styles.logEntryCalsUnit}>kcal</Text>
+        <Pressable
+          onPress={() => onDelete(entry)}
+          hitSlop={8}
+          style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.5 }]}
+        >
+          <Text style={styles.deleteBtnText}>🗑️</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// ─── Today's log modal ────────────────────────────────────────────────────────
+
+interface TodayLogModalProps {
+  visible: boolean;
+  onClose: () => void;
+  entries: LogEntry[];
+  onDelete: (entry: LogEntry) => void;
+}
+
+function TodayLogModal({ visible, onClose, entries, onDelete }: TodayLogModalProps) {
+  const insets = useSafeAreaInsets();
+  const totals = sumMacros(entries);
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.modalBackdrop} onPress={onClose} />
+      <View
+        style={[
+          styles.logModalSheet,
+          { paddingBottom: insets.bottom + 24 },
+        ]}
+      >
+        {/* Handle */}
+        <View style={styles.modalHandle} />
+
+        {/* Modal header */}
+        <View style={styles.logModalHeader}>
+          <View>
+            <Text style={styles.logModalTitle}>Today's Log 📋</Text>
+            <Text style={styles.logModalDate}>{formatTodayDate()}</Text>
+          </View>
+          <Pressable
+            onPress={onClose}
+            style={styles.closeBtn}
+            hitSlop={8}
+          >
+            <Text style={styles.closeBtnText}>✕</Text>
+          </Pressable>
+        </View>
+
+        {/* Summary row */}
+        <View style={styles.summaryRow}>
+          <SummaryCard emoji="🔥" label="Calories" value={totals.calories} unit="kcal" color={C.primary} />
+          <SummaryCard emoji="🥩" label="Protein" value={totals.protein} unit="g" color={C.macroProtein} />
+          <SummaryCard emoji="🍚" label="Carbs" value={totals.carbs} unit="g" color="#2196F3" />
+          <SummaryCard emoji="🥑" label="Fat" value={totals.fat} unit="g" color={C.macroFat} />
+        </View>
+
+        {/* Food list or empty */}
+        {entries.length === 0 ? (
+          <View style={styles.logEmptyWrap}>
+            <Text style={styles.logEmptyEmoji}>🦝</Text>
+            <Text style={styles.logEmptyTitle}>Nothing logged yet today!</Text>
+            <Text style={styles.logEmptySubtitle}>Tap the search bar to add food 🦝</Text>
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.logList}
+            contentContainerStyle={styles.logListContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {entries.map((entry) => (
+              <LogEntryRow key={entry.id} entry={entry} onDelete={onDelete} />
+            ))}
+          </ScrollView>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Food search result card ───────────────────────────────────────────────────
+
 interface FoodCardProps {
   food: FoodSearchResult;
   onPress: () => void;
 }
 function FoodCard({ food, onPress }: FoodCardProps) {
   return (
-    <Pressable style={styles.foodCard} onPress={() => { Haptics.selectionAsync(); onPress(); }}>
-      <Text style={styles.foodName} numberOfLines={2}>{food.description}</Text>
+    <Pressable
+      style={styles.foodCard}
+      onPress={() => {
+        Haptics.selectionAsync();
+        onPress();
+      }}
+    >
+      <Text style={styles.foodName} numberOfLines={2}>
+        {food.description}
+      </Text>
       <View style={styles.foodMacroRow}>
         <Text style={styles.foodPer}>Per 100g:</Text>
         <MacroTag label="kcal" value={String(food.calories)} color={C.primary} />
@@ -71,6 +233,8 @@ function FoodCard({ food, onPress }: FoodCardProps) {
     </Pressable>
   );
 }
+
+// ─── Portion modal ────────────────────────────────────────────────────────────
 
 interface PortionModalProps {
   food: FoodSearchResult | null;
@@ -96,10 +260,10 @@ function PortionModal({ food, visible, onClose, onLog }: PortionModalProps) {
         style={styles.modalSheet}
       >
         <View style={styles.modalHandle} />
-
         <View style={styles.modalContent}>
-          <Text style={styles.modalFoodName} numberOfLines={2}>{food.description}</Text>
-
+          <Text style={styles.modalFoodName} numberOfLines={2}>
+            {food.description}
+          </Text>
           <Text style={styles.modalLabel}>Amount in grams</Text>
           <TextInput
             style={styles.gramsInput}
@@ -109,20 +273,26 @@ function PortionModal({ food, visible, onClose, onLog }: PortionModalProps) {
             selectTextOnFocus
             placeholderTextColor={C.textTertiary}
           />
-
           {preview && (
             <View style={styles.previewCard}>
               <Text style={styles.previewTitle}>For {grams || "0"}g:</Text>
               <View style={styles.previewRows}>
-                <Text style={styles.previewRow}>🔥 <Text style={styles.previewVal}>{preview.calories} kcal</Text></Text>
-                <Text style={styles.previewRow}>🥩 <Text style={styles.previewVal}>{preview.protein}g</Text> protein</Text>
-                <Text style={styles.previewRow}>🍚 <Text style={styles.previewVal}>{preview.carbs}g</Text> carbs</Text>
-                <Text style={styles.previewRow}>🥑 <Text style={styles.previewVal}>{preview.fat}g</Text> fat</Text>
+                <Text style={styles.previewRow}>
+                  🔥 <Text style={styles.previewVal}>{preview.calories} kcal</Text>
+                </Text>
+                <Text style={styles.previewRow}>
+                  🥩 <Text style={styles.previewVal}>{preview.protein}g</Text> protein
+                </Text>
+                <Text style={styles.previewRow}>
+                  🍚 <Text style={styles.previewVal}>{preview.carbs}g</Text> carbs
+                </Text>
+                <Text style={styles.previewRow}>
+                  🥑 <Text style={styles.previewVal}>{preview.fat}g</Text> fat
+                </Text>
               </View>
               <Text style={styles.rockyComment}>Looks delicious! 🦝😋</Text>
             </View>
           )}
-
           <Pressable
             style={styles.logBtn}
             onPress={() => {
@@ -133,7 +303,7 @@ function PortionModal({ food, visible, onClose, onLog }: PortionModalProps) {
           >
             <Text style={styles.logBtnText}>Add to Today 🦝</Text>
           </Pressable>
-          <Pressable style={styles.cancelBtn} onPress={onClose}>
+          <Pressable style={styles.cancelBtnRow} onPress={onClose}>
             <Text style={styles.cancelBtnText}>Cancel</Text>
           </Pressable>
         </View>
@@ -141,6 +311,8 @@ function PortionModal({ food, visible, onClose, onLog }: PortionModalProps) {
     </Modal>
   );
 }
+
+// ─── Empty / no-results states ────────────────────────────────────────────────
 
 function EmptyState({ onPillPress }: { onPillPress: (label: string) => void }) {
   return (
@@ -152,9 +324,14 @@ function EmptyState({ onPillPress }: { onPillPress: (label: string) => void }) {
           <Pressable
             key={p.label}
             style={styles.pill}
-            onPress={() => { Haptics.selectionAsync(); onPillPress(p.label); }}
+            onPress={() => {
+              Haptics.selectionAsync();
+              onPillPress(p.label);
+            }}
           >
-            <Text style={styles.pillText}>{p.emoji} {p.label}</Text>
+            <Text style={styles.pillText}>
+              {p.emoji} {p.label}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -193,17 +370,60 @@ function SuccessOverlay() {
   );
 }
 
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
 export default function LogScreen() {
   const insets = useSafeAreaInsets();
+
+  // Search state
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showPortionModal, setShowPortionModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Log history state
+  const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
+  const [showLogModal, setShowLogModal] = useState(false);
+
+  // Load today's log on focus (keeps home rings in sync too)
+  useFocusEffect(
+    useCallback(() => {
+      loadTodayLog().then(setLogEntries);
+    }, [])
+  );
+
+  // Refresh entries whenever the log modal opens
+  const handleOpenLogModal = useCallback(async () => {
+    const entries = await loadTodayLog();
+    setLogEntries(entries);
+    setShowLogModal(true);
+  }, []);
+
+  const handleDeleteEntry = useCallback((entry: LogEntry) => {
+    Alert.alert(
+      "Remove food?",
+      `Remove "${entry.foodName}" from today's log?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            await removeLogEntry(entry.id);
+            const updated = await loadTodayLog();
+            setLogEntries(updated);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          },
+        },
+      ]
+    );
+  }, []);
+
+  // Search
   const runSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
       setResults([]);
@@ -222,44 +442,55 @@ export default function LogScreen() {
     }
   }, []);
 
-  const handleQueryChange = useCallback((text: string) => {
-    setQuery(text);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(text), 500);
-  }, [runSearch]);
+  const handleQueryChange = useCallback(
+    (text: string) => {
+      setQuery(text);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => runSearch(text), 500);
+    },
+    [runSearch]
+  );
 
-  const handlePillPress = useCallback((label: string) => {
-    setQuery(label);
-    runSearch(label);
-  }, [runSearch]);
+  const handlePillPress = useCallback(
+    (label: string) => {
+      setQuery(label);
+      runSearch(label);
+    },
+    [runSearch]
+  );
 
   const handleFoodPress = useCallback((food: FoodSearchResult) => {
     setSelectedFood(food);
-    setShowModal(true);
+    setShowPortionModal(true);
   }, []);
 
-  const handleLog = useCallback(async (grams: number, macros: MacroResult) => {
-    if (!selectedFood) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const entry = {
-      id: Date.now().toString(),
-      foodName: selectedFood.description,
-      grams,
-      calories: macros.calories,
-      protein: macros.protein,
-      carbs: macros.carbs,
-      fat: macros.fat,
-      loggedAt: new Date().toISOString(),
-      date: today,
-    };
-    await appendLogEntry(entry);
-    setShowModal(false);
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      router.back();
-    }, 1400);
-  }, [selectedFood]);
+  const handleLog = useCallback(
+    async (grams: number, macros: MacroResult) => {
+      if (!selectedFood) return;
+      const today = new Date().toISOString().slice(0, 10);
+      const entry: LogEntry = {
+        id: Date.now().toString(),
+        foodName: selectedFood.description,
+        grams,
+        calories: macros.calories,
+        protein: macros.protein,
+        carbs: macros.carbs,
+        fat: macros.fat,
+        loggedAt: new Date().toISOString(),
+        date: today,
+      };
+      await appendLogEntry(entry);
+      const updated = await loadTodayLog();
+      setLogEntries(updated);
+      setShowPortionModal(false);
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        router.back();
+      }, 1400);
+    },
+    [selectedFood]
+  );
 
   const showEmpty = !hasSearched && !isSearching;
   const showNoResults = hasSearched && !isSearching && results.length === 0;
@@ -280,7 +511,18 @@ export default function LogScreen() {
             <Text style={styles.backText}>‹</Text>
           </Pressable>
           <Text style={styles.title}>Quick Log 🦝</Text>
-          <View style={{ width: 40 }} />
+          <Pressable
+            onPress={handleOpenLogModal}
+            style={styles.todayBtn}
+            hitSlop={8}
+          >
+            <Text style={styles.todayBtnText}>📋 Today</Text>
+            {logEntries.length > 0 && (
+              <View style={styles.todayBadge}>
+                <Text style={styles.todayBadgeText}>{logEntries.length}</Text>
+              </View>
+            )}
+          </Pressable>
         </View>
 
         <View style={styles.speechBubble}>
@@ -297,26 +539,40 @@ export default function LogScreen() {
             placeholder="Search food... (e.g. chicken breast)"
             placeholderTextColor={C.textTertiary}
             returnKeyType="search"
-            onSubmitEditing={() => { if (debounceRef.current) clearTimeout(debounceRef.current); runSearch(query); }}
+            onSubmitEditing={() => {
+              if (debounceRef.current) clearTimeout(debounceRef.current);
+              runSearch(query);
+            }}
             autoCorrect={false}
           />
-          {isSearching && <ActivityIndicator size="small" color={C.primary} style={{ marginRight: 8 }} />}
+          {isSearching && (
+            <ActivityIndicator size="small" color={C.primary} style={{ marginRight: 8 }} />
+          )}
           {!isSearching && query.length > 0 && (
-            <Pressable onPress={() => { setQuery(""); setResults([]); setHasSearched(false); }} hitSlop={8}>
+            <Pressable
+              onPress={() => {
+                setQuery("");
+                setResults([]);
+                setHasSearched(false);
+              }}
+              hitSlop={8}
+            >
               <Text style={styles.clearBtn}>✕</Text>
             </Pressable>
           )}
         </View>
 
-        {/* States */}
         {showEmpty && <EmptyState onPillPress={handlePillPress} />}
         {showNoResults && <NoResultsState />}
 
-        {/* Results */}
         {results.length > 0 && (
           <View style={styles.resultsList}>
             {results.map((food) => (
-              <FoodCard key={food.fdcId} food={food} onPress={() => handleFoodPress(food)} />
+              <FoodCard
+                key={food.fdcId}
+                food={food}
+                onPress={() => handleFoodPress(food)}
+              />
             ))}
           </View>
         )}
@@ -325,12 +581,19 @@ export default function LogScreen() {
       {/* Portion modal */}
       <PortionModal
         food={selectedFood}
-        visible={showModal}
-        onClose={() => setShowModal(false)}
+        visible={showPortionModal}
+        onClose={() => setShowPortionModal(false)}
         onLog={handleLog}
       />
 
-      {/* Success overlay */}
+      {/* Today's log modal */}
+      <TodayLogModal
+        visible={showLogModal}
+        onClose={() => setShowLogModal(false)}
+        entries={logEntries}
+        onDelete={handleDeleteEntry}
+      />
+
       {showSuccess && <SuccessOverlay />}
     </View>
   );
@@ -363,6 +626,34 @@ const styles = StyleSheet.create({
     fontWeight: "700" as const,
     color: C.text,
   },
+  todayBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: C.secondary,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 4,
+  },
+  todayBtnText: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: C.primary,
+  },
+  todayBadge: {
+    backgroundColor: C.primary,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  todayBadgeText: {
+    fontSize: 11,
+    fontWeight: "700" as const,
+    color: C.primaryForeground,
+  },
 
   // Speech bubble
   speechBubble: {
@@ -394,9 +685,7 @@ const styles = StyleSheet.create({
     gap: 8,
     ...CARD_SHADOW,
   },
-  searchIcon: {
-    fontSize: 17,
-  },
+  searchIcon: { fontSize: 17 },
   searchInput: {
     flex: 1,
     fontSize: 16,
@@ -446,19 +735,11 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 99,
   },
-  macroTagText: {
-    fontSize: 12,
-    fontWeight: "700" as const,
-  },
-  macroTagLabel: {
-    fontSize: 11,
-    color: C.textSecondary,
-  },
+  macroTagText: { fontSize: 12, fontWeight: "700" as const },
+  macroTagLabel: { fontSize: 11, color: C.textSecondary },
 
   // Results list
-  resultsList: {
-    gap: 10,
-  },
+  resultsList: { gap: 10 },
 
   // Empty / no results
   emptyWrap: {
@@ -466,19 +747,14 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     gap: 12,
   },
-  emptyRocky: {
-    fontSize: 56,
-  },
+  emptyRocky: { fontSize: 56 },
   emptyTitle: {
     fontSize: 16,
     fontWeight: "600" as const,
     color: C.text,
     textAlign: "center",
   },
-  emptySubtitle: {
-    fontSize: 14,
-    color: C.textSecondary,
-  },
+  emptySubtitle: { fontSize: 14, color: C.textSecondary },
   pillsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -501,17 +777,10 @@ const styles = StyleSheet.create({
     fontWeight: "500" as const,
   },
 
-  // Portion modal
+  // Shared modal backdrop + handle
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  modalSheet: {
-    backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 40,
-    ...CARD_SHADOW,
   },
   modalHandle: {
     width: 40,
@@ -521,6 +790,15 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginTop: 12,
     marginBottom: 8,
+  },
+
+  // Portion modal (bottom sheet)
+  modalSheet: {
+    backgroundColor: C.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 40,
+    ...CARD_SHADOW,
   },
   modalContent: {
     paddingHorizontal: 24,
@@ -565,17 +843,9 @@ const styles = StyleSheet.create({
     fontWeight: "600" as const,
     marginBottom: 2,
   },
-  previewRows: {
-    gap: 4,
-  },
-  previewRow: {
-    fontSize: 15,
-    color: C.text,
-  },
-  previewVal: {
-    fontWeight: "700" as const,
-    color: C.text,
-  },
+  previewRows: { gap: 4 },
+  previewRow: { fontSize: 15, color: C.text },
+  previewVal: { fontWeight: "700" as const, color: C.text },
   rockyComment: {
     fontSize: 13,
     color: C.textSecondary,
@@ -598,13 +868,163 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700" as const,
   },
-  cancelBtn: {
+  cancelBtnRow: {
     alignItems: "center",
     paddingVertical: 8,
   },
   cancelBtnText: {
     fontSize: 15,
     color: C.text,
+  },
+
+  // Today's log modal
+  logModalSheet: {
+    backgroundColor: C.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "85%",
+    ...CARD_SHADOW,
+  },
+  logModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  logModalTitle: {
+    fontSize: 20,
+    fontWeight: "700" as const,
+    color: C.text,
+  },
+  logModalDate: {
+    fontSize: 13,
+    color: C.textSecondary,
+    marginTop: 2,
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: C.muted,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  closeBtnText: {
+    fontSize: 14,
+    color: C.textSecondary,
+    fontWeight: "600" as const,
+  },
+
+  // Summary row
+  summaryRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: C.background,
+    borderRadius: 12,
+    padding: 10,
+    alignItems: "center",
+    gap: 1,
+  },
+  summaryEmoji: { fontSize: 18, marginBottom: 2 },
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+  },
+  summaryUnit: {
+    fontSize: 10,
+    color: C.mutedForeground,
+    fontWeight: "500" as const,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    color: C.mutedForeground,
+    marginTop: 1,
+  },
+
+  // Log entry list
+  logList: {
+    flex: 1,
+  },
+  logListContent: {
+    paddingHorizontal: 20,
+    gap: 10,
+    paddingBottom: 8,
+  },
+  logEntryCard: {
+    flexDirection: "row",
+    backgroundColor: C.background,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    gap: 10,
+    alignItems: "flex-start",
+  },
+  logEntryMain: {
+    flex: 1,
+    gap: 3,
+  },
+  logEntryName: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: C.text,
+    lineHeight: 18,
+  },
+  logEntryGrams: {
+    fontSize: 12,
+    color: C.textTertiary,
+  },
+  logEntryMacros: {
+    fontSize: 11,
+    color: C.textSecondary,
+    marginTop: 2,
+  },
+  logEntryRight: {
+    alignItems: "flex-end",
+    gap: 4,
+  },
+  logEntryCals: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+    color: C.primary,
+  },
+  logEntryCalsUnit: {
+    fontSize: 10,
+    color: C.mutedForeground,
+    marginTop: -4,
+  },
+  deleteBtn: {
+    marginTop: 4,
+  },
+  deleteBtnText: {
+    fontSize: 16,
+  },
+
+  // Log modal empty state
+  logEmptyWrap: {
+    alignItems: "center",
+    paddingVertical: 40,
+    gap: 10,
+    paddingHorizontal: 20,
+  },
+  logEmptyEmoji: { fontSize: 52 },
+  logEmptyTitle: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: C.text,
+    textAlign: "center",
+  },
+  logEmptySubtitle: {
+    fontSize: 13,
+    color: C.textSecondary,
+    textAlign: "center",
   },
 
   // Success overlay
@@ -622,9 +1042,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-  successEmoji: {
-    fontSize: 64,
-  },
+  successEmoji: { fontSize: 64 },
   successText: {
     fontSize: 24,
     fontWeight: "700" as const,
