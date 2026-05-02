@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -15,7 +16,10 @@ import {
   TextInput,
   View,
 } from "react-native";
+
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 import { SkeletonFoodCard } from "@/components/SkeletonLoader";
 import colors from "@/constants/colors";
@@ -185,6 +189,8 @@ function TodayLogModal({ visible, onClose, entries, onDelete }: TodayLogModalPro
   const insets = useSafeAreaInsets();
   const totals = sumMacros(entries);
 
+  console.log("[TodayLogModal] entries count:", entries.length, entries.map((e) => e.foodName));
+
   return (
     <Modal
       visible={visible}
@@ -192,57 +198,62 @@ function TodayLogModal({ visible, onClose, entries, onDelete }: TodayLogModalPro
       animationType="slide"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.modalBackdrop} onPress={onClose} />
-      <View
-        style={[
-          styles.logModalSheet,
-          { paddingBottom: insets.bottom + 24 },
-        ]}
-      >
-        {/* Handle */}
-        <View style={styles.modalHandle} />
+      {/* Full-screen wrapper: backdrop behind sheet, sheet pinned to bottom */}
+      <View style={styles.logModalOverlay}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
 
-        {/* Modal header */}
-        <View style={styles.logModalHeader}>
-          <View>
-            <Text style={styles.logModalTitle}>Today's Log 📋</Text>
-            <Text style={styles.logModalDate}>{formatTodayDate()}</Text>
+        <View
+          style={[
+            styles.logModalSheet,
+            { paddingBottom: insets.bottom + 24 },
+          ]}
+        >
+          {/* Handle */}
+          <View style={styles.modalHandle} />
+
+          {/* Modal header */}
+          <View style={styles.logModalHeader}>
+            <View>
+              <Text style={styles.logModalTitle}>Today's Log 📋</Text>
+              <Text style={styles.logModalDate}>{formatTodayDate()}</Text>
+            </View>
+            <Pressable
+              onPress={onClose}
+              style={styles.closeBtn}
+              hitSlop={8}
+            >
+              <Text style={styles.closeBtnText}>✕</Text>
+            </Pressable>
           </View>
-          <Pressable
-            onPress={onClose}
-            style={styles.closeBtn}
-            hitSlop={8}
-          >
-            <Text style={styles.closeBtnText}>✕</Text>
-          </Pressable>
-        </View>
 
-        {/* Summary row */}
-        <View style={styles.summaryRow}>
-          <SummaryCard emoji="🔥" label="Calories" value={totals.calories} unit="kcal" color={C.primary} />
-          <SummaryCard emoji="🥩" label="Protein" value={totals.protein} unit="g" color={C.macroProtein} />
-          <SummaryCard emoji="🍚" label="Carbs" value={totals.carbs} unit="g" color="#2196F3" />
-          <SummaryCard emoji="🥑" label="Fat" value={totals.fat} unit="g" color={C.macroFat} />
-        </View>
-
-        {/* Food list or empty */}
-        {entries.length === 0 ? (
-          <View style={styles.logEmptyWrap}>
-            <Text style={styles.logEmptyEmoji}>🦝</Text>
-            <Text style={styles.logEmptyTitle}>Nothing logged yet today!</Text>
-            <Text style={styles.logEmptySubtitle}>Tap the search bar to add food 🦝</Text>
+          {/* Summary row */}
+          <View style={styles.summaryRow}>
+            <SummaryCard emoji="🔥" label="Calories" value={totals.calories} unit="kcal" color={C.primary} />
+            <SummaryCard emoji="🥩" label="Protein" value={totals.protein} unit="g" color={C.macroProtein} />
+            <SummaryCard emoji="🍚" label="Carbs" value={totals.carbs} unit="g" color="#2196F3" />
+            <SummaryCard emoji="🥑" label="Fat" value={totals.fat} unit="g" color={C.macroFat} />
           </View>
-        ) : (
-          <ScrollView
-            style={styles.logList}
-            contentContainerStyle={styles.logListContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {entries.map((entry) => (
-              <LogEntryRow key={entry.id} entry={entry} onDelete={onDelete} />
-            ))}
-          </ScrollView>
-        )}
+
+          {/* Food list or empty */}
+          {entries.length === 0 ? (
+            <View style={styles.logEmptyWrap}>
+              <Text style={styles.logEmptyEmoji}>🦝</Text>
+              <Text style={styles.logEmptyTitle}>Nothing logged yet today!</Text>
+              <Text style={styles.logEmptySubtitle}>Tap the search bar to add food 🦝</Text>
+            </View>
+          ) : (
+            <ScrollView
+              style={styles.logList}
+              contentContainerStyle={styles.logListContent}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              {entries.map((entry) => (
+                <LogEntryRow key={entry.id} entry={entry} onDelete={onDelete} />
+              ))}
+            </ScrollView>
+          )}
+        </View>
       </View>
     </Modal>
   );
@@ -936,6 +947,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
   },
+
+  // Today's log modal overlay (full-screen flex wrapper)
+  logModalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
   modalHandle: {
     width: 40,
     height: 4,
@@ -1102,9 +1120,9 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  // Log entry list
+  // Log entry list — maxHeight so it scrolls without needing a flex parent height
   logList: {
-    flex: 1,
+    maxHeight: SCREEN_HEIGHT * 0.45,
   },
   logListContent: {
     paddingHorizontal: 20,
