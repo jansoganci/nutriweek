@@ -1,0 +1,77 @@
+Build the profile screen in `app/(main)/profile.tsx`.
+
+This screen shows user info, calculated stats, and allows editing. 
+All data comes from AsyncStorage keys "userProfile" and "calculationResults".
+
+LAYOUT (ScrollView, top to bottom):
+
+1. HEADER
+- Title: "My Profile"
+- Rocky 🦝 centered at top
+- Rocky message based on goal:
+  - cut: "Stay in that deficit! You've got this 🦝🔥"
+  - bulk: "Eat big, lift big! Let's grow 🦝💪"
+  - maintain: "Balance is the key 🦝⚖️"
+
+2. STATS CARDS ROW (horizontal, 3 cards side by side)
+- BMI: value + category label + category color
+- Daily Calories: target kcal
+- Goal: cut/bulk/maintain with emoji
+
+3. MACRO TARGETS CARD
+- Title: "Daily Targets"
+- 4 rows: Calories, Protein, Carbs, Fat
+- Each row: emoji + label + bold value on right
+- NOT editable — calculated automatically
+
+4. PERSONAL INFO CARD (editable)
+- Title: "Personal Info" + "Edit" button top right
+- Fields (read mode — just display values):
+  - Age
+  - Gender
+  - Height (cm)
+  - Weight (kg)
+  - Activity Level
+  - Dietary Preferences (comma separated pills)
+- When "Edit" tapped:
+  - Fields become editable inputs
+  - "Edit" button changes to "Save" and "Cancel"
+  - On "Save":
+    - Validate all fields (no empty values)
+    - Save updated userProfile to AsyncStorage key "userProfile"
+    - Re-run calculateAll() from services/calculations.ts with new values
+    - Save new results to AsyncStorage key "calculationResults"
+    - Update all displayed values on screen
+    - Show success toast: "Profile updated! 🦝✅"
+  - On "Cancel":
+    - Revert all changes
+    - Back to read mode
+
+5. BODY MEASUREMENTS CARD (editable)
+- Title: "Body Measurements" + "Edit" button top right
+- Fields: Waist, Hips, Chest, Left Arm, Left Leg (all in cm)
+- If no measurements saved: show "Add measurements" placeholder text in gray
+- Same edit/save/cancel pattern as Personal Info card
+- Save to AsyncStorage key "userProfile" under measurements object
+- No recalculation needed for measurements
+
+6. DANGER ZONE CARD
+- Title: "Settings"
+- Two buttons:
+  - "Reset Weekly Plan 🔄" — clears AsyncStorage key "weeklyPlan", navigates to home, triggers plan generation popup
+  - "Reset All Data 🗑️" — shows confirmation alert "Are you sure? This will delete everything." — on confirm: clears ALL AsyncStorage keys, navigates to onboarding step1
+
+ACTIVITY LEVEL display mapping:
+- sedentary → "Sedentary"
+- lightly_active → "Lightly Active"
+- moderately_active → "Moderately Active"
+- very_active → "Very Active"
+- extra_active → "Extra Active"
+
+GOAL display mapping:
+- cut → "Lose Fat 🔥"
+- bulk → "Build Muscle 💪"
+- maintain → "Stay Balanced ⚖️"
+
+After save, refresh MacroRing targets on home screen via AsyncStorage update.
+All calculations use calculateAll() from services/calculations.ts — never hardcode values.
