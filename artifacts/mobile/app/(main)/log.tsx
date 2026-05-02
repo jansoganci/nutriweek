@@ -359,7 +359,11 @@ function PortionModal({ food, visible, onClose, onLog }: PortionModalProps) {
       >
         <View style={styles.modalHandle} />
         <View style={styles.modalContent}>
-          <Text style={styles.modalFoodName} numberOfLines={2}>
+          <Text
+            style={styles.modalFoodName}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {food.description}
           </Text>
           <Text style={styles.modalLabel}>Amount in grams</Text>
@@ -846,7 +850,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    flexWrap: "wrap",
+    flexWrap: "nowrap",
   },
   foodPer: {
     fontSize: 11,
@@ -863,7 +867,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 99,
   },
-  macroTagText: { fontSize: 12, fontWeight: "700" as const },
+  macroTagText: { fontSize: 11, fontWeight: "700" as const },
   macroTagLabel: { fontSize: 11, color: C.textSecondary },
 
   // Search error
@@ -993,7 +997,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.input,
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    height: 56,
     fontSize: 22,
     fontWeight: "700" as const,
     color: C.text,
