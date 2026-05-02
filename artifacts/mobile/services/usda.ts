@@ -1,12 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const USDA_BASE = "https://api.nal.usda.gov/fdc/v1";
-
-function getApiKey(): string {
-  return (
-    (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_USDA_API_KEY) ||
-    "DEMO_KEY"
-  );
+function getApiBase(): string {
+  const domain =
+    (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_DOMAIN) || "";
+  return domain ? `https://${domain}/api` : "/api";
 }
 
 export interface FoodSearchResult {
@@ -49,15 +46,13 @@ export async function searchFoods(query: string): Promise<FoodSearchResult[]> {
   if (!query.trim()) return [];
 
   const url =
-    `${USDA_BASE}/foods/search` +
+    `${getApiBase()}/foods/search` +
     `?query=${encodeURIComponent(query.trim())}` +
-    `&api_key=${getApiKey()}` +
-    `&pageSize=20` +
-    `&dataType=Foundation,SR%20Legacy`;
+    `&pageSize=20`;
 
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`USDA API error ${response.status}`);
+    throw new Error(`Food search error ${response.status}`);
   }
 
   const data = (await response.json()) as { foods?: Record<string, unknown>[] };
