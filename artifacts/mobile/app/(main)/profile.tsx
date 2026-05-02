@@ -316,12 +316,13 @@ export default function ProfileScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.container,
-          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 },
+          { paddingTop: insets.top + 16, paddingBottom: 100 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <Text style={styles.screenTitle}>My Profile</Text>
+        <View style={styles.headerBar}>
+          <Text style={styles.screenTitle}>My Profile</Text>
+        </View>
         <View style={styles.rockyContainer}>
           <Text style={styles.rockyEmoji}>🦝</Text>
           <View style={styles.rockySpeech}>
@@ -642,14 +643,17 @@ const styles = StyleSheet.create({
   },
 
   screenTitle: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: "700",
     color: C.text,
+  },
+  headerBar: {
+    paddingBottom: 12,
   },
 
   rockyContainer: {
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
   rockyEmoji: {
     fontSize: 56,
