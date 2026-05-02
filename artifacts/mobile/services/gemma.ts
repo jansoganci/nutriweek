@@ -185,10 +185,10 @@ export async function askGemma(prompt: string): Promise<string> {
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   const url = `${OLLAMA_BASE_URL}/api/generate`;
-  console.log("[askGemma] → fetch START", url, "model:", MODEL);
+  console.log("Fetching from:", OLLAMA_BASE_URL);
 
   try {
-    const resp = await fetch(url, {
+    const response = await fetch(url, {
       method: "POST",
       headers: NGROK_HEADERS,
       body: JSON.stringify({ model: MODEL, prompt, stream: false }),
@@ -197,25 +197,31 @@ export async function askGemma(prompt: string): Promise<string> {
 
     clearTimeout(timeoutId);
 
-    console.log("[askGemma] ← fetch END  status:", resp.status, resp.statusText);
+    console.log("Response status:", response.status);
 
-    if (!resp.ok) {
-      const body = await resp.text().catch(() => "(unreadable body)");
+    if (!response.ok) {
+      const body = await response.text().catch((error) => {
+        console.error("Full error:", JSON.stringify(error));
+        console.error("[askGemma] Non-OK body read error:", error);
+        return "(unreadable body)";
+      });
       console.error("[askGemma] Non-OK response body:", body);
       throw new Error("OLLAMA_OFFLINE");
     }
 
-    const data = (await resp.json()) as { response?: string };
+    const data = (await response.json()) as { response?: string };
     console.log("[askGemma] Response length:", (data.response ?? "").length, "chars");
     return data.response ?? "";
   } catch (err) {
     clearTimeout(timeoutId);
     if (err instanceof Error) {
       console.error("[askGemma] CATCH name:", err.name, "| message:", err.message);
+      console.error("Full error:", JSON.stringify(err));
       if (err.name === "AbortError") throw new Error("OLLAMA_TIMEOUT");
       if (err.message === "OLLAMA_OFFLINE" || err.message === "OLLAMA_TIMEOUT") throw err;
     } else {
       console.error("[askGemma] CATCH unknown error:", err);
+      console.error("Full error:", JSON.stringify(err));
     }
     throw new Error("OLLAMA_OFFLINE");
   }
@@ -227,7 +233,13 @@ function parseWeeklyPlan(text: string): MockWeeklyPlan {
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("PARSE_ERROR");
 
-  const parsed = JSON.parse(match[0]) as MockWeeklyPlan;
+  let parsed: MockWeeklyPlan;
+  try {
+    parsed = JSON.parse(match[0]) as MockWeeklyPlan;
+  } catch (error) {
+    console.error("Full error:", JSON.stringify(error));
+    throw new Error("PARSE_ERROR");
+  }
 
   if (!parsed.days || !Array.isArray(parsed.days) || parsed.days.length === 0) {
     throw new Error("PARSE_ERROR");
@@ -258,14 +270,19 @@ export async function generateWeeklyPlan(
   let calc = calculations;
 
   if (!profile || !calc) {
-    const raw = await AsyncStorage.getItem("userProfile");
-    if (!raw) {
-      // No profile yet — return mock
-      await AsyncStorage.setItem("weeklyPlan", JSON.stringify(MOCK_PLAN));
-      return MOCK_PLAN;
+    try {
+      const raw = await AsyncStorage.getItem("userProfile");
+      if (!raw) {
+        // No profile yet — return mock
+        await AsyncStorage.setItem("weeklyPlan", JSON.stringify(MOCK_PLAN));
+        return MOCK_PLAN;
+      }
+      profile = JSON.parse(raw) as UserProfile;
+      calc = calculateAll(profile);
+    } catch (error) {
+      console.error("Full error:", JSON.stringify(error));
+      throw new Error("PROFILE_LOAD_ERROR");
     }
-    profile = JSON.parse(raw) as UserProfile;
-    calc = calculateAll(profile);
   }
 
   const prompt = buildMealPlanPrompt(profile, calc);
@@ -274,6 +291,7 @@ export async function generateWeeklyPlan(
   try {
     rawText = await askGemma(prompt);
   } catch (err) {
+    console.error("Full error:", JSON.stringify(err));
     // Re-throw OLLAMA_OFFLINE / OLLAMA_TIMEOUT as-is for the UI to handle
     throw err;
   }
@@ -281,7 +299,8 @@ export async function generateWeeklyPlan(
   let plan: MockWeeklyPlan;
   try {
     plan = parseWeeklyPlan(rawText);
-  } catch {
+  } catch (error) {
+    console.error("Full error:", JSON.stringify(error));
     console.warn("[gemma] Failed to parse Gemma response — falling back to mock plan");
     console.warn("[gemma] Raw response:", rawText);
     plan = MOCK_PLAN;

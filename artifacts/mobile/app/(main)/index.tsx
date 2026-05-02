@@ -264,6 +264,17 @@ function LoadingState() {
   );
 }
 
+function getPlanErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message === "OLLAMA_OFFLINE") return "Rocky can't reach Ollama right now.";
+    if (error.message === "OLLAMA_TIMEOUT") return "Gemma took too long to reply.";
+    if (error.message === "PROFILE_LOAD_ERROR") return "Couldn't load your profile for meal planning.";
+    return error.message;
+  }
+  if (typeof error === "string") return error;
+  return "Something went wrong while generating your plan.";
+}
+
 interface EmptyStateProps { onGenerate: () => void; }
 function EmptyState({ onGenerate }: EmptyStateProps) {
   return (
@@ -313,6 +324,7 @@ export default function MealPlanScreen() {
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [streak, setStreak] = useState<number | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -354,18 +366,21 @@ export default function MealPlanScreen() {
     setShowModal(false);
     setShowEmpty(false);
     setPlanError(null);
+    setRefreshError(null);
     setIsGenerating(true);
     try {
       const plan = await generateWeeklyPlan();
       setWeeklyPlan(plan);
     } catch (err) {
+      const message = getPlanErrorMessage(err);
+      setRefreshError(message);
       const msg = err instanceof Error ? err.message : "";
       if (msg === "OLLAMA_OFFLINE") {
         setPlanError("OLLAMA_OFFLINE");
       } else if (msg === "OLLAMA_TIMEOUT") {
         setPlanError("OLLAMA_TIMEOUT");
       } else {
-        Alert.alert("Oops!", "Rocky had trouble generating your plan. Try again!");
+        Alert.alert("Oops!", message);
         setShowEmpty(true);
       }
     } finally {
@@ -440,16 +455,17 @@ export default function MealPlanScreen() {
         </View>
 
         {isGenerating && (
-          <View style={styles.skeletonWrap}>
-            <Text style={styles.skeletonTitle}>Rocky is cooking your plan... 🍳</Text>
-            <SkeletonPlanCard />
-            <SkeletonPlanCard />
-            <SkeletonPlanCard />
-          </View>
+          <LoadingState />
         )}
 
         {!isGenerating && planError && (
           <PlanErrorCard error={planError} onRetry={handleGenerate} />
+        )}
+
+        {!isGenerating && refreshError && !planError && (
+          <View style={styles.refreshErrorCard}>
+            <Text style={styles.refreshErrorText}>{refreshError}</Text>
+          </View>
         )}
 
         {!isGenerating && !planError && weeklyPlan && (
