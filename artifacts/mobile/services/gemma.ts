@@ -240,6 +240,7 @@ function parseWeeklyPlan(text: string): MockWeeklyPlan {
     parsed = JSON.parse(match[0]) as MockWeeklyPlan;
   } catch (error) {
     console.error("Full error:", JSON.stringify(error));
+    alert("PARSE HATASI - ilk 300 karakter: " + text.substring(0, 300));
     throw new Error("PARSE_ERROR");
   }
 
@@ -297,6 +298,7 @@ export async function generateWeeklyPlan(
     alert("CEVAP: " + rawText.substring(0, 300));
   } catch (err) {
     console.error("Full error:", JSON.stringify(err));
+    alert("GEMMA HATASI: " + (err instanceof Error ? err.message : String(err)));
     // Re-throw OLLAMA_OFFLINE / OLLAMA_TIMEOUT as-is for the UI to handle
     throw err;
   }
