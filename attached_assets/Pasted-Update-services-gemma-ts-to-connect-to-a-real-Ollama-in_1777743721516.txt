@@ -1,0 +1,88 @@
+Update `services/gemma.ts` to connect to a real Ollama instance via ngrok.
+
+Replace the mock generateWeeklyPlan() function with a real Gemma 4 API call.
+
+OLLAMA_BASE_URL = "https://6457-94-55-148-34.ngrok-free.app"
+
+1. UPDATE generateWeeklyPlan(userProfile: UserProfile, calculations: CalculationResults):
+
+Make a POST request to:
+https://6457-94-55-148-34.ngrok-free.app/api/generate
+
+Request body:
+{
+  "model": "gemma4:e4b",
+  "prompt": [build this dynamically from userProfile],
+  "stream": false
+}
+
+PROMPT TEMPLATE (build this string dynamically):
+"""
+You are a nutrition expert. Generate a 7-day meal plan.
+Return ONLY a valid JSON object. No explanation, no markdown, 
+no extra text. Just the raw JSON.
+
+User profile:
+- Age: {age}
+- Gender: {gender}
+- Weight: {weight}kg
+- Height: {height}cm
+- Goal: {goal} (cut = lose fat, bulk = build muscle, maintain = stay balanced)
+- Activity: {activityLevel}
+- Dietary preferences: {dietaryPreferences}
+- Daily calorie target: {targetCalories} kcal
+- Protein target: {protein}g
+- Carbs target: {carbs}g
+- Fat target: {fat}g
+
+Follow FDA 2025 dietary guidelines:
+Priority order: lean protein first, dairy second, 
+vegetables third, whole grains and fruits last.
+
+Return this exact JSON structure:
+{
+  "weekOf": "2026-05-04",
+  "days": [
+    {
+      "day": "Monday",
+      "date": "2026-05-04",
+      "totalCalories": 2100,
+      "meals": [
+        { "type": "Breakfast", "name": "meal name", "calories": 400, "emoji": "🥣", "protein": 20, "carbs": 45, "fat": 12 },
+        { "type": "Lunch", "name": "meal name", "calories": 550, "emoji": "🥗", "protein": 35, "carbs": 50, "fat": 18 },
+        { "type": "Dinner", "name": "meal name", "calories": 650, "emoji": "🍗", "protein": 45, "carbs": 55, "fat": 20 },
+        { "type": "Snack", "name": "meal name", "calories": 200, "emoji": "🍎", "protein": 8, "carbs": 25, "fat": 5 }
+      ]
+    }
+  ]
+}
+
+Generate exactly 7 days: Monday through Sunday.
+Make sure total daily calories are close to {targetCalories}.
+"""
+
+2. PARSE RESPONSE:
+- response.response contains the raw text from Gemma
+- Extract JSON from the response text
+- Handle cases where Gemma adds extra text before/after JSON
+- Use regex: const match = text.match(/\{[\s\S]*\}/)
+- Parse the matched JSON
+- If parsing fails: fall back to mock data and log the error
+
+3. ERROR HANDLING:
+- If fetch fails (OLLAMA_OFFLINE): throw Error("OLLAMA_OFFLINE")
+- If response parsing fails: throw Error("PARSE_ERROR") 
+- Set timeout to 120 seconds (Gemma needs time to think)
+
+4. Also add this helper function:
+askGemma(prompt: string): Promise<string>
+- Generic function to ask Gemma anything
+- Returns raw text response
+- Used for future features
+- Same error handling as above
+
+5. Add ngrok-skip-browser-warning header to all requests:
+headers: {
+  "Content-Type": "application/json",
+  "ngrok-skip-browser-warning": "true"
+}

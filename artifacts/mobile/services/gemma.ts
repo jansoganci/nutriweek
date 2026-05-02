@@ -1,12 +1,18 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import type { DailyMacros, DietaryPreference, Goal } from "@/constants/types";
+import type { UserProfile } from "@/constants/types";
+import calculateAll, { type CalculationResults } from "@/services/calculations";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface MockMeal {
   type: string;
   name: string;
   calories: number;
   emoji: string;
+  protein: number;
+  carbs: number;
+  fat: number;
 }
 
 export interface MockDayPlan {
@@ -21,6 +27,19 @@ export interface MockWeeklyPlan {
   days: MockDayPlan[];
 }
 
+// ─── Config ───────────────────────────────────────────────────────────────────
+
+const OLLAMA_BASE_URL = "https://6457-94-55-148-34.ngrok-free.app";
+const MODEL = "gemma4:e4b";
+const TIMEOUT_MS = 120_000;
+
+const NGROK_HEADERS = {
+  "Content-Type": "application/json",
+  "ngrok-skip-browser-warning": "true",
+};
+
+// ─── Fallback mock plan ────────────────────────────────────────────────────────
+
 const MOCK_PLAN: MockWeeklyPlan = {
   weekOf: "2026-05-04",
   days: [
@@ -29,10 +48,10 @@ const MOCK_PLAN: MockWeeklyPlan = {
       date: "2026-05-04",
       totalCalories: 2100,
       meals: [
-        { type: "Breakfast", name: "Oatmeal with Berries", calories: 380, emoji: "🥣" },
-        { type: "Lunch", name: "Grilled Chicken Salad", calories: 520, emoji: "🥗" },
-        { type: "Dinner", name: "Salmon with Vegetables", calories: 680, emoji: "🐟" },
-        { type: "Snack", name: "Greek Yogurt", calories: 150, emoji: "🥛" },
+        { type: "Breakfast", name: "Oatmeal with Berries", calories: 380, emoji: "🥣", protein: 12, carbs: 62, fat: 7 },
+        { type: "Lunch", name: "Grilled Chicken Salad", calories: 520, emoji: "🥗", protein: 42, carbs: 28, fat: 16 },
+        { type: "Dinner", name: "Salmon with Vegetables", calories: 680, emoji: "🐟", protein: 48, carbs: 38, fat: 26 },
+        { type: "Snack", name: "Greek Yogurt", calories: 150, emoji: "🥛", protein: 15, carbs: 12, fat: 3 },
       ],
     },
     {
@@ -40,10 +59,10 @@ const MOCK_PLAN: MockWeeklyPlan = {
       date: "2026-05-05",
       totalCalories: 2080,
       meals: [
-        { type: "Breakfast", name: "Scrambled Eggs & Toast", calories: 420, emoji: "🍳" },
-        { type: "Lunch", name: "Turkey Wrap", calories: 490, emoji: "🌯" },
-        { type: "Dinner", name: "Beef Stir Fry with Rice", calories: 720, emoji: "🥩" },
-        { type: "Snack", name: "Apple with Almond Butter", calories: 180, emoji: "🍎" },
+        { type: "Breakfast", name: "Scrambled Eggs & Toast", calories: 420, emoji: "🍳", protein: 22, carbs: 38, fat: 18 },
+        { type: "Lunch", name: "Turkey Wrap", calories: 490, emoji: "🌯", protein: 35, carbs: 48, fat: 14 },
+        { type: "Dinner", name: "Beef Stir Fry with Rice", calories: 720, emoji: "🥩", protein: 45, carbs: 72, fat: 22 },
+        { type: "Snack", name: "Apple with Almond Butter", calories: 180, emoji: "🍎", protein: 5, carbs: 22, fat: 9 },
       ],
     },
     {
@@ -51,10 +70,10 @@ const MOCK_PLAN: MockWeeklyPlan = {
       date: "2026-05-06",
       totalCalories: 2150,
       meals: [
-        { type: "Breakfast", name: "Protein Smoothie", calories: 350, emoji: "🥤" },
-        { type: "Lunch", name: "Quinoa Buddha Bowl", calories: 580, emoji: "🥙" },
-        { type: "Dinner", name: "Grilled Chicken & Sweet Potato", calories: 650, emoji: "🍗" },
-        { type: "Snack", name: "Mixed Nuts", calories: 200, emoji: "🥜" },
+        { type: "Breakfast", name: "Protein Smoothie", calories: 350, emoji: "🥤", protein: 30, carbs: 42, fat: 6 },
+        { type: "Lunch", name: "Quinoa Buddha Bowl", calories: 580, emoji: "🥙", protein: 22, carbs: 78, fat: 18 },
+        { type: "Dinner", name: "Grilled Chicken & Sweet Potato", calories: 650, emoji: "🍗", protein: 50, carbs: 58, fat: 16 },
+        { type: "Snack", name: "Mixed Nuts", calories: 200, emoji: "🥜", protein: 6, carbs: 8, fat: 18 },
       ],
     },
     {
@@ -62,10 +81,10 @@ const MOCK_PLAN: MockWeeklyPlan = {
       date: "2026-05-07",
       totalCalories: 2090,
       meals: [
-        { type: "Breakfast", name: "Avocado Toast & Eggs", calories: 440, emoji: "🥑" },
-        { type: "Lunch", name: "Lentil Soup", calories: 460, emoji: "🍲" },
-        { type: "Dinner", name: "Tuna Pasta", calories: 620, emoji: "🍝" },
-        { type: "Snack", name: "Cottage Cheese", calories: 140, emoji: "🧀" },
+        { type: "Breakfast", name: "Avocado Toast & Eggs", calories: 440, emoji: "🥑", protein: 18, carbs: 38, fat: 22 },
+        { type: "Lunch", name: "Lentil Soup", calories: 460, emoji: "🍲", protein: 24, carbs: 68, fat: 8 },
+        { type: "Dinner", name: "Tuna Pasta", calories: 620, emoji: "🍝", protein: 40, carbs: 72, fat: 14 },
+        { type: "Snack", name: "Cottage Cheese", calories: 140, emoji: "🧀", protein: 18, carbs: 6, fat: 4 },
       ],
     },
     {
@@ -73,10 +92,10 @@ const MOCK_PLAN: MockWeeklyPlan = {
       date: "2026-05-08",
       totalCalories: 2120,
       meals: [
-        { type: "Breakfast", name: "Banana Pancakes", calories: 410, emoji: "🥞" },
-        { type: "Lunch", name: "Caesar Salad with Chicken", calories: 510, emoji: "🥗" },
-        { type: "Dinner", name: "Shrimp Tacos", calories: 680, emoji: "🌮" },
-        { type: "Snack", name: "Protein Bar", calories: 220, emoji: "🍫" },
+        { type: "Breakfast", name: "Banana Pancakes", calories: 410, emoji: "🥞", protein: 14, carbs: 68, fat: 10 },
+        { type: "Lunch", name: "Caesar Salad with Chicken", calories: 510, emoji: "🥗", protein: 38, carbs: 22, fat: 26 },
+        { type: "Dinner", name: "Shrimp Tacos", calories: 680, emoji: "🌮", protein: 42, carbs: 65, fat: 20 },
+        { type: "Snack", name: "Protein Bar", calories: 220, emoji: "🍫", protein: 20, carbs: 24, fat: 8 },
       ],
     },
     {
@@ -84,10 +103,10 @@ const MOCK_PLAN: MockWeeklyPlan = {
       date: "2026-05-09",
       totalCalories: 2200,
       meals: [
-        { type: "Breakfast", name: "Full English Breakfast", calories: 520, emoji: "🍳" },
-        { type: "Lunch", name: "Burger & Side Salad", calories: 620, emoji: "🍔" },
-        { type: "Dinner", name: "Grilled Steak & Veggies", calories: 750, emoji: "🥩" },
-        { type: "Snack", name: "Dark Chocolate", calories: 160, emoji: "🍫" },
+        { type: "Breakfast", name: "Full English Breakfast", calories: 520, emoji: "🍳", protein: 28, carbs: 30, fat: 28 },
+        { type: "Lunch", name: "Burger & Side Salad", calories: 620, emoji: "🍔", protein: 36, carbs: 56, fat: 26 },
+        { type: "Dinner", name: "Grilled Steak & Veggies", calories: 750, emoji: "🥩", protein: 58, carbs: 32, fat: 36 },
+        { type: "Snack", name: "Dark Chocolate", calories: 160, emoji: "🍫", protein: 2, carbs: 18, fat: 10 },
       ],
     },
     {
@@ -95,72 +114,179 @@ const MOCK_PLAN: MockWeeklyPlan = {
       date: "2026-05-10",
       totalCalories: 2050,
       meals: [
-        { type: "Breakfast", name: "Overnight Oats", calories: 380, emoji: "🥣" },
-        { type: "Lunch", name: "Vegetable Curry & Rice", calories: 540, emoji: "🍛" },
-        { type: "Dinner", name: "Baked Cod & Salad", calories: 580, emoji: "🐟" },
-        { type: "Snack", name: "Hummus & Veggies", calories: 170, emoji: "🥕" },
+        { type: "Breakfast", name: "Overnight Oats", calories: 380, emoji: "🥣", protein: 14, carbs: 60, fat: 8 },
+        { type: "Lunch", name: "Vegetable Curry & Rice", calories: 540, emoji: "🍛", protein: 16, carbs: 88, fat: 12 },
+        { type: "Dinner", name: "Baked Cod & Salad", calories: 580, emoji: "🐟", protein: 48, carbs: 38, fat: 18 },
+        { type: "Snack", name: "Hummus & Veggies", calories: 170, emoji: "🥕", protein: 6, carbs: 20, fat: 8 },
       ],
     },
   ],
 };
 
-export async function generateWeeklyPlan(): Promise<MockWeeklyPlan> {
-  const TIMEOUT_MS = 60_000;
+// ─── Prompt builder ───────────────────────────────────────────────────────────
 
-  const ollamaCheck = await Promise.race<boolean>([
-    fetch("http://localhost:11434/api/tags")
-      .then((r) => r.ok)
-      .catch(() => false),
-    new Promise<boolean>((resolve) =>
-      setTimeout(() => resolve(false), 5_000)
-    ),
-  ]);
+function buildMealPlanPrompt(profile: UserProfile, calc: CalculationResults): string {
+  const dietStr =
+    profile.dietaryPreferences.length > 0
+      ? profile.dietaryPreferences.join(", ")
+      : "none";
 
-  if (!ollamaCheck) {
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("OLLAMA_TIMEOUT")), TIMEOUT_MS)
-    );
-    const planGeneration = (async () => {
-      await new Promise((resolve) => setTimeout(resolve, 2500));
-      await AsyncStorage.setItem("weeklyPlan", JSON.stringify(MOCK_PLAN));
-      return MOCK_PLAN;
-    })();
+  const today = new Date();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - today.getDay() + 1);
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const dates = days.map((_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
 
-    try {
-      return await Promise.race([planGeneration, timeout]);
-    } catch (err) {
-      if (err instanceof Error && err.message === "OLLAMA_TIMEOUT") {
-        throw err;
-      }
-      throw new Error("OLLAMA_OFFLINE");
-    }
-  }
+  const exampleDays = days.map((day, i) => ({
+    day,
+    date: dates[i],
+    totalCalories: calc.targetCalories,
+    meals: [
+      { type: "Breakfast", name: "meal name", calories: Math.round(calc.targetCalories * 0.2), emoji: "🥣", protein: Math.round(calc.macros.protein * 0.2), carbs: Math.round(calc.macros.carbs * 0.2), fat: Math.round(calc.macros.fat * 0.2) },
+      { type: "Lunch", name: "meal name", calories: Math.round(calc.targetCalories * 0.3), emoji: "🥗", protein: Math.round(calc.macros.protein * 0.3), carbs: Math.round(calc.macros.carbs * 0.3), fat: Math.round(calc.macros.fat * 0.3) },
+      { type: "Dinner", name: "meal name", calories: Math.round(calc.targetCalories * 0.35), emoji: "🍗", protein: Math.round(calc.macros.protein * 0.35), carbs: Math.round(calc.macros.carbs * 0.35), fat: Math.round(calc.macros.fat * 0.35) },
+      { type: "Snack", name: "meal name", calories: Math.round(calc.targetCalories * 0.1), emoji: "🍎", protein: Math.round(calc.macros.protein * 0.1), carbs: Math.round(calc.macros.carbs * 0.1), fat: Math.round(calc.macros.fat * 0.1) },
+    ],
+  }));
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    const resp = await fetch("http://localhost:11434/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "gemma", prompt: "Generate a weekly meal plan." }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    if (!resp.ok) throw new Error("OLLAMA_OFFLINE");
-  } catch (err) {
-    if (err instanceof Error && err.message === "OLLAMA_TIMEOUT") throw err;
-    if (err instanceof Error && err.name === "AbortError") throw new Error("OLLAMA_TIMEOUT");
-    throw new Error("OLLAMA_OFFLINE");
-  }
+  return `You are a nutrition expert. Generate a 7-day meal plan.
+Return ONLY a valid JSON object. No explanation, no markdown, no extra text. Just the raw JSON.
 
-  await AsyncStorage.setItem("weeklyPlan", JSON.stringify(MOCK_PLAN));
-  return MOCK_PLAN;
+User profile:
+- Age: ${profile.age}
+- Gender: ${profile.gender}
+- Weight: ${profile.weight}kg
+- Height: ${profile.height}cm
+- Goal: ${profile.goal} (cut = lose fat, bulk = build muscle, maintain = stay balanced)
+- Activity: ${profile.activityLevel}
+- Dietary preferences: ${dietStr}
+- Daily calorie target: ${calc.targetCalories} kcal
+- Protein target: ${calc.macros.protein}g
+- Carbs target: ${calc.macros.carbs}g
+- Fat target: ${calc.macros.fat}g
+
+Follow FDA 2025 dietary guidelines:
+Priority order: lean protein first, dairy second, vegetables third, whole grains and fruits last.
+
+Return this exact JSON structure:
+${JSON.stringify({ weekOf: dates[0], days: exampleDays }, null, 2)}
+
+Generate exactly 7 days: Monday through Sunday.
+Make sure total daily calories are close to ${calc.targetCalories}.`;
 }
 
+// ─── Generic Gemma helper ─────────────────────────────────────────────────────
+
+export async function askGemma(prompt: string): Promise<string> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const resp = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+      method: "POST",
+      headers: NGROK_HEADERS,
+      body: JSON.stringify({ model: MODEL, prompt, stream: false }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!resp.ok) {
+      throw new Error("OLLAMA_OFFLINE");
+    }
+
+    const data = (await resp.json()) as { response?: string };
+    return data.response ?? "";
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof Error) {
+      if (err.name === "AbortError") throw new Error("OLLAMA_TIMEOUT");
+      if (err.message === "OLLAMA_OFFLINE" || err.message === "OLLAMA_TIMEOUT") throw err;
+    }
+    throw new Error("OLLAMA_OFFLINE");
+  }
+}
+
+// ─── Parse Gemma JSON response ────────────────────────────────────────────────
+
+function parseWeeklyPlan(text: string): MockWeeklyPlan {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("PARSE_ERROR");
+
+  const parsed = JSON.parse(match[0]) as MockWeeklyPlan;
+
+  if (!parsed.days || !Array.isArray(parsed.days) || parsed.days.length === 0) {
+    throw new Error("PARSE_ERROR");
+  }
+
+  // Normalise any missing numeric meal fields to 0
+  parsed.days = parsed.days.map((day) => ({
+    ...day,
+    meals: (day.meals ?? []).map((meal) => ({
+      ...meal,
+      protein: (meal as MockMeal).protein ?? 0,
+      carbs: (meal as MockMeal).carbs ?? 0,
+      fat: (meal as MockMeal).fat ?? 0,
+    })),
+  }));
+
+  return parsed;
+}
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+
+export async function generateWeeklyPlan(
+  userProfile?: UserProfile,
+  calculations?: CalculationResults
+): Promise<MockWeeklyPlan> {
+  // Load profile + calculations from AsyncStorage if not provided
+  let profile = userProfile;
+  let calc = calculations;
+
+  if (!profile || !calc) {
+    const raw = await AsyncStorage.getItem("userProfile");
+    if (!raw) {
+      // No profile yet — return mock
+      await AsyncStorage.setItem("weeklyPlan", JSON.stringify(MOCK_PLAN));
+      return MOCK_PLAN;
+    }
+    profile = JSON.parse(raw) as UserProfile;
+    calc = calculateAll(profile);
+  }
+
+  const prompt = buildMealPlanPrompt(profile, calc);
+
+  let rawText: string;
+  try {
+    rawText = await askGemma(prompt);
+  } catch (err) {
+    // Re-throw OLLAMA_OFFLINE / OLLAMA_TIMEOUT as-is for the UI to handle
+    throw err;
+  }
+
+  let plan: MockWeeklyPlan;
+  try {
+    plan = parseWeeklyPlan(rawText);
+  } catch {
+    console.warn("[gemma] Failed to parse Gemma response — falling back to mock plan");
+    console.warn("[gemma] Raw response:", rawText);
+    plan = MOCK_PLAN;
+  }
+
+  await AsyncStorage.setItem("weeklyPlan", JSON.stringify(plan));
+  return plan;
+}
+
+// ─── Legacy exports (kept for compatibility) ──────────────────────────────────
+
 export interface GenerateMealPlanParams {
-  goal: Goal;
-  targetMacros: DailyMacros;
-  dietaryPreferences: DietaryPreference[];
+  goal: import("@/constants/types").Goal;
+  targetMacros: import("@/constants/types").DailyMacros;
+  dietaryPreferences: import("@/constants/types").DietaryPreference[];
 }
 
 export async function askNutritionQuestion(_question: string): Promise<string> {
@@ -169,7 +295,9 @@ export async function askNutritionQuestion(_question: string): Promise<string> {
 
 export async function isOllamaAvailable(): Promise<boolean> {
   try {
-    const response = await fetch("http://localhost:11434/api/tags");
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`, {
+      headers: NGROK_HEADERS,
+    });
     return response.ok;
   } catch {
     return false;
