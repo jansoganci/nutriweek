@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { SkeletonFoodCard } from "@/components/SkeletonLoader";
 import colors from "@/constants/colors";
 import {
   appendLogEntry,
@@ -31,6 +32,48 @@ import {
 } from "@/services/usda";
 
 const C = colors.light;
+
+function ScalePressable({
+  style,
+  onPress,
+  toScale = 0.95,
+  children,
+  hitSlop,
+}: {
+  style?: object | object[];
+  onPress?: () => void;
+  toScale?: number;
+  children: React.ReactNode;
+  hitSlop?: number;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={hitSlop}
+      onPressIn={() =>
+        Animated.spring(scale, {
+          toValue: toScale,
+          useNativeDriver: true,
+          damping: 15,
+          stiffness: 400,
+        }).start()
+      }
+      onPressOut={() =>
+        Animated.spring(scale, {
+          toValue: 1,
+          useNativeDriver: true,
+          damping: 15,
+          stiffness: 300,
+        }).start()
+      }
+    >
+      <Animated.View style={[style, { transform: [{ scale }] }]}>
+        {children}
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 const QUICK_PILLS = [
   { emoji: "🍗", label: "Chicken Breast" },
@@ -213,8 +256,9 @@ interface FoodCardProps {
 }
 function FoodCard({ food, onPress }: FoodCardProps) {
   return (
-    <Pressable
+    <ScalePressable
       style={styles.foodCard}
+      toScale={0.98}
       onPress={() => {
         Haptics.selectionAsync();
         onPress();
@@ -230,7 +274,7 @@ function FoodCard({ food, onPress }: FoodCardProps) {
         <MacroTag label="carb" value={`${food.carbs}g`} color="#2196F3" />
         <MacroTag label="fat" value={`${food.fat}g`} color={C.macroFat} />
       </View>
-    </Pressable>
+    </ScalePressable>
   );
 }
 
@@ -339,12 +383,12 @@ function PortionModal({ food, visible, onClose, onLog }: PortionModalProps) {
               <Text style={styles.rockyComment}>Looks delicious! 🦝😋</Text>
             </View>
           )}
-          <Pressable
+          <ScalePressable
             style={styles.logBtn}
             onPress={handleLogPress}
           >
             <Text style={styles.logBtnText}>Add to Today 🦝</Text>
-          </Pressable>
+          </ScalePressable>
           <Pressable style={styles.cancelBtnRow} onPress={onClose}>
             <Text style={styles.cancelBtnText}>Cancel</Text>
           </Pressable>
@@ -363,9 +407,10 @@ function EmptyState({ onPillPress }: { onPillPress: (label: string) => void }) {
       <Text style={styles.emptyTitle}>Search for any food above!</Text>
       <View style={styles.pillsRow}>
         {QUICK_PILLS.map((p) => (
-          <Pressable
+          <ScalePressable
             key={p.label}
             style={styles.pill}
+            toScale={0.95}
             onPress={() => {
               Haptics.selectionAsync();
               onPillPress(p.label);
@@ -374,7 +419,7 @@ function EmptyState({ onPillPress }: { onPillPress: (label: string) => void }) {
             <Text style={styles.pillText}>
               {p.emoji} {p.label}
             </Text>
-          </Pressable>
+          </ScalePressable>
         ))}
       </View>
     </View>
@@ -459,7 +504,7 @@ export default function LogScreen() {
             await removeLogEntry(entry.id);
             const updated = await loadTodayLog();
             setLogEntries(updated);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
           },
         },
       ]
@@ -626,10 +671,18 @@ export default function LogScreen() {
           </View>
         )}
 
-        {!searchError && showEmpty && <EmptyState onPillPress={handlePillPress} />}
-        {!searchError && showNoResults && <NoResultsState />}
+        {!searchError && isSearching && (
+          <View style={styles.resultsList}>
+            <SkeletonFoodCard />
+            <SkeletonFoodCard />
+            <SkeletonFoodCard />
+          </View>
+        )}
 
-        {results.length > 0 && (
+        {!searchError && !isSearching && showEmpty && <EmptyState onPillPress={handlePillPress} />}
+        {!searchError && !isSearching && showNoResults && <NoResultsState />}
+
+        {!isSearching && results.length > 0 && (
           <View style={styles.resultsList}>
             {results.map((food) => (
               <FoodCard

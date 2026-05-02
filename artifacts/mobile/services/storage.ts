@@ -79,3 +79,54 @@ export async function safeClearAll(): Promise<boolean> {
     return false;
   }
 }
+
+const STREAK_KEY = "streak";
+
+interface StreakData {
+  count: number;
+  lastLogDate: string;
+}
+
+function getTodayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getYesterdayStr(): string {
+  return new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+}
+
+export async function loadStreak(): Promise<number> {
+  try {
+    const raw = await AsyncStorage.getItem(STREAK_KEY);
+    if (!raw) return 0;
+    const data: StreakData = JSON.parse(raw);
+    const today = getTodayStr();
+    const yesterday = getYesterdayStr();
+    if (data.lastLogDate !== today && data.lastLogDate !== yesterday) return 0;
+    return data.count;
+  } catch {
+    return 0;
+  }
+}
+
+export async function updateStreak(): Promise<number> {
+  try {
+    const today = getTodayStr();
+    const yesterday = getYesterdayStr();
+    const raw = await AsyncStorage.getItem(STREAK_KEY);
+    const data: StreakData = raw
+      ? (JSON.parse(raw) as StreakData)
+      : { count: 0, lastLogDate: "" };
+
+    if (data.lastLogDate === today) return data.count;
+
+    const newCount = data.lastLogDate === yesterday ? data.count + 1 : 1;
+    await AsyncStorage.setItem(
+      STREAK_KEY,
+      JSON.stringify({ count: newCount, lastLogDate: today })
+    );
+    return newCount;
+  } catch {
+    return 0;
+  }
+}

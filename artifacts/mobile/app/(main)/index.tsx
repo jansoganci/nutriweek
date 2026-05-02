@@ -15,13 +15,57 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import MacroRing from "@/components/MacroRing";
+import { SkeletonPlanCard } from "@/components/SkeletonLoader";
 import colors from "@/constants/colors";
 import type { UserProfile } from "@/constants/types";
 import calculateAll, { type CalculationResults } from "@/services/calculations";
 import { generateWeeklyPlan, type MockWeeklyPlan, type MockDayPlan } from "@/services/gemma";
+import { loadStreak, updateStreak } from "@/services/storage";
 import { loadTodayLog, sumMacros } from "@/services/usda";
 
 const C = colors.light;
+
+function ScalePressable({
+  style,
+  onPress,
+  toScale = 0.95,
+  children,
+  hitSlop,
+}: {
+  style?: object | object[];
+  onPress?: () => void;
+  toScale?: number;
+  children: React.ReactNode;
+  hitSlop?: number;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={hitSlop}
+      onPressIn={() =>
+        Animated.spring(scale, {
+          toValue: toScale,
+          useNativeDriver: true,
+          damping: 15,
+          stiffness: 400,
+        }).start()
+      }
+      onPressOut={() =>
+        Animated.spring(scale, {
+          toValue: 1,
+          useNativeDriver: true,
+          damping: 15,
+          stiffness: 300,
+        }).start()
+      }
+    >
+      <Animated.View style={[style, { transform: [{ scale }] }]}>
+        {children}
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 const FUN_FACTS = [
   "Raccoons can open locks! 🦝🔓",
@@ -68,12 +112,12 @@ function FirstLaunchModal({ visible, onGenerate, onDismiss }: FirstLaunchModalPr
           <Text style={styles.modalSubtitle}>
             I'll create a personalized 7-day plan based on your goals 🎯
           </Text>
-          <Pressable
+          <ScalePressable
             style={styles.modalPrimary}
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onGenerate(); }}
           >
             <Text style={styles.modalPrimaryText}>Let's go! 🦝</Text>
-          </Pressable>
+          </ScalePressable>
           <Pressable style={styles.modalSecondary} onPress={onDismiss}>
             <Text style={styles.modalSecondaryText}>Maybe later</Text>
           </Pressable>
@@ -145,8 +189,9 @@ function DayCard({ day, isToday, isExpanded, onToggle }: DayCardProps) {
   const shownMeals = isExpanded ? day.meals : mainMeals.slice(0, 3);
 
   return (
-    <Pressable
+    <ScalePressable
       style={[styles.dayCard, isToday && styles.dayCardToday]}
+      toScale={0.98}
       onPress={() => { Haptics.selectionAsync(); onToggle(); }}
     >
       {isToday && <View style={styles.todayBorder} />}
@@ -177,7 +222,7 @@ function DayCard({ day, isToday, isExpanded, onToggle }: DayCardProps) {
           <Text style={styles.moreText}>+ snack · tap to expand</Text>
         )}
       </View>
-    </Pressable>
+    </ScalePressable>
   );
 }
 
@@ -224,9 +269,9 @@ function EmptyState({ onGenerate }: EmptyStateProps) {
       <Text style={styles.emptyRocky}>🦝</Text>
       <Text style={styles.emptyTitle}>No plan yet!</Text>
       <Text style={styles.emptySubtitle}>Let Rocky build your personalized 7-day meal plan</Text>
-      <Pressable style={styles.emptyBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onGenerate(); }}>
+      <ScalePressable style={styles.emptyBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onGenerate(); }}>
         <Text style={styles.emptyBtnText}>Generate My Plan 🦝</Text>
-      </Pressable>
+      </ScalePressable>
     </View>
   );
 }
@@ -245,9 +290,9 @@ function PlanErrorCard({ error, onRetry }: PlanErrorCardProps) {
           ? "Rocky is napping... Make sure Ollama is running on your Mac! 🦝💤"
           : "Taking too long... Gemma is thinking hard! Try again? 🦝"}
       </Text>
-      <Pressable style={styles.planErrorBtn} onPress={onRetry}>
+      <ScalePressable style={styles.planErrorBtn} onPress={onRetry}>
         <Text style={styles.planErrorBtnText}>Try Again</Text>
-      </Pressable>
+      </ScalePressable>
     </View>
   );
 }
@@ -265,6 +310,7 @@ export default function MealPlanScreen() {
   const [showEmpty, setShowEmpty] = useState(false);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [streak, setStreak] = useState<number | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -289,8 +335,15 @@ export default function MealPlanScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadTodayLog().then((entries) => {
+      loadTodayLog().then(async (entries) => {
         setConsumed(sumMacros(entries));
+        if (entries.length > 0) {
+          const s = await updateStreak();
+          setStreak(s);
+        } else {
+          const s = await loadStreak();
+          setStreak(s);
+        }
       });
     }, [])
   );
@@ -356,6 +409,17 @@ export default function MealPlanScreen() {
           </Pressable>
         </View>
 
+        {/* Streak row */}
+        {streak !== null && (
+          <View style={styles.streakRow}>
+            {streak > 0 ? (
+              <Text style={styles.streakText}>🔥 {streak} day streak</Text>
+            ) : (
+              <Text style={styles.streakText}>🌱 Start your streak today!</Text>
+            )}
+          </View>
+        )}
+
         {/* Macro Summary */}
         {loaded && <MacroSummaryCard targets={targets} consumed={consumed} />}
 
@@ -373,7 +437,14 @@ export default function MealPlanScreen() {
           )}
         </View>
 
-        {isGenerating && <LoadingState />}
+        {isGenerating && (
+          <View style={styles.skeletonWrap}>
+            <Text style={styles.skeletonTitle}>Rocky is cooking your plan... 🍳</Text>
+            <SkeletonPlanCard />
+            <SkeletonPlanCard />
+            <SkeletonPlanCard />
+          </View>
+        )}
 
         {!isGenerating && planError && (
           <PlanErrorCard error={planError} onRetry={handleGenerate} />
@@ -399,12 +470,12 @@ export default function MealPlanScreen() {
       </ScrollView>
 
       {/* Floating + button */}
-      <Pressable
+      <ScalePressable
         style={[styles.fab, { bottom: insets.bottom + 68 }]}
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(main)/log"); }}
       >
         <Text style={styles.fabIcon}>+</Text>
-      </Pressable>
+      </ScalePressable>
 
       <FirstLaunchModal
         visible={showModal}
@@ -445,6 +516,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: C.textSecondary,
     marginTop: 2,
+  },
+
+  // Streak
+  streakRow: {
+    backgroundColor: C.card,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignSelf: "flex-start",
+    ...CARD_SHADOW,
+  },
+  streakText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: C.text,
+  },
+
+  // Skeleton wrapper
+  skeletonWrap: {
+    gap: 10,
+  },
+  skeletonTitle: {
+    fontSize: 15,
+    fontWeight: "600" as const,
+    color: C.textSecondary,
+    textAlign: "center",
+    marginBottom: 4,
   },
   funFactBtn: {
     width: 44,
