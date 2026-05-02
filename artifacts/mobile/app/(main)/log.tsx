@@ -525,10 +525,6 @@ export default function LogScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.speechBubble}>
-          <Text style={styles.speechText}>What did you eat? 🦝🍽️</Text>
-        </View>
-
         {/* Search bar */}
         <View style={styles.searchBar}>
           <Text style={styles.searchIcon}>🔍</Text>
