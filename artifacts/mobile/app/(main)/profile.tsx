@@ -397,9 +397,10 @@ export default function ProfileScreen() {
               <InfoInput
                 label="Age"
                 value={infoFieldsDraft.age}
-                onChangeText={(v) => setInfoFieldsDraft((d) => ({ ...d, age: v }))}
+                onChangeText={(v) => { setInfoFieldsDraft((d) => ({ ...d, age: v })); setFieldErrors((e) => ({ ...e, age: undefined })); }}
                 keyboardType="numeric"
                 placeholder="e.g. 28"
+                error={fieldErrors.age}
               />
               <InfoInput
                 label="Gender"
@@ -410,16 +411,18 @@ export default function ProfileScreen() {
               <InfoInput
                 label="Height (cm)"
                 value={infoFieldsDraft.height}
-                onChangeText={(v) => setInfoFieldsDraft((d) => ({ ...d, height: v }))}
+                onChangeText={(v) => { setInfoFieldsDraft((d) => ({ ...d, height: v })); setFieldErrors((e) => ({ ...e, height: undefined })); }}
                 keyboardType="numeric"
                 placeholder="e.g. 175"
+                error={fieldErrors.height}
               />
               <InfoInput
                 label="Weight (kg)"
                 value={infoFieldsDraft.weight}
-                onChangeText={(v) => setInfoFieldsDraft((d) => ({ ...d, weight: v }))}
+                onChangeText={(v) => { setInfoFieldsDraft((d) => ({ ...d, weight: v })); setFieldErrors((e) => ({ ...e, weight: undefined })); }}
                 keyboardType="numeric"
                 placeholder="e.g. 70"
+                error={fieldErrors.weight}
               />
               <InfoInput
                 label="Activity Level"
@@ -591,18 +594,20 @@ function InfoInput({
   onChangeText,
   keyboardType,
   placeholder,
+  error,
 }: {
   label: string;
   value: string;
   onChangeText: (v: string) => void;
   keyboardType?: "default" | "numeric";
   placeholder?: string;
+  error?: string;
 }) {
   return (
     <View style={styles.inputRow}>
       <Text style={styles.inputLabel}>{label}</Text>
       <TextInput
-        style={styles.textInput}
+        style={[styles.textInput, error ? { borderColor: C.destructive, borderWidth: 1.5 } : {}]}
         value={value}
         onChangeText={onChangeText}
         keyboardType={keyboardType ?? "default"}
@@ -611,6 +616,7 @@ function InfoInput({
         autoCorrect={false}
         autoCapitalize="none"
       />
+      {error ? <Text style={styles.fieldErrorText}>{error}</Text> : null}
     </View>
   );
 }
@@ -859,6 +865,11 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     textAlign: "center",
     paddingVertical: 8,
+  },
+  fieldErrorText: {
+    fontSize: 12,
+    color: C.destructive,
+    marginTop: 2,
   },
 
   settingsBtn: {
