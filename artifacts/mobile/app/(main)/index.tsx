@@ -150,10 +150,10 @@ function MacroSummaryCard({ targets, consumed }: MacroSummaryCardProps) {
     <View style={styles.card}>
       <Text style={styles.cardTitle}>Today's Progress</Text>
       <View style={styles.macroRingRow}>
-        <MacroRing label="Calories" current={consumed.calories} target={targetCals} unit="kcal" color={C.primary} size={72} strokeWidth={7} />
-        <MacroRing label="Protein" current={consumed.protein} target={targetProtein} unit="g" color={C.macroProtein} size={72} strokeWidth={7} />
-        <MacroRing label="Carbs" current={consumed.carbs} target={targetCarbs} unit="g" color="#2196F3" size={72} strokeWidth={7} />
-        <MacroRing label="Fat" current={consumed.fat} target={targetFat} unit="g" color={C.macroFat} size={72} strokeWidth={7} />
+        <MacroRing label="Calories" current={consumed.calories} target={targetCals} unit="kcal" color="#FF6B35" size={72} strokeWidth={7} />
+        <MacroRing label="Protein" current={consumed.protein} target={targetProtein} unit="g" color="#4CAF50" size={72} strokeWidth={7} />
+        <MacroRing label="Carbs" current={consumed.carbs} target={targetCarbs} unit="g" color="#FFB300" size={72} strokeWidth={7} />
+        <MacroRing label="Fat" current={consumed.fat} target={targetFat} unit="g" color="#64B5F6" size={72} strokeWidth={7} />
       </View>
       <Text style={[styles.remainingText, remaining < 0 && targetCals > 0 && { color: C.destructive }]}>
         {remainingText}
@@ -219,7 +219,9 @@ function DayCard({ day, isToday, isExpanded, onToggle }: DayCardProps) {
           </View>
         ))}
         {!isExpanded && day.meals.some((m) => m.type === "Snack") && (
-          <Text style={styles.moreText}>+ snack · tap to expand</Text>
+          <View style={styles.snackPill}>
+            <Text style={styles.snackPillText}>🍎 Snack  ▾</Text>
+          </View>
         )}
       </View>
     </ScalePressable>
@@ -402,7 +404,7 @@ export default function MealPlanScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>{getGreeting()}</Text>
-            <Text style={styles.userName}>Champion 👊</Text>
+            <Text style={styles.userName}>Hey there! 👊</Text>
           </View>
           <Pressable style={styles.funFactBtn} onPress={handleFunFact}>
             <Text style={styles.funFactEmoji}>🦝</Text>
@@ -471,7 +473,7 @@ export default function MealPlanScreen() {
 
       {/* Floating + button */}
       <ScalePressable
-        style={[styles.fab, { bottom: insets.bottom + 68 }]}
+        style={[styles.fab, { bottom: insets.bottom + 148 }]}
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(main)/log"); }}
       >
         <Text style={styles.fabIcon}>+</Text>
@@ -729,11 +731,19 @@ const styles = StyleSheet.create({
     backgroundColor: C.border,
     marginLeft: 36,
   },
-  moreText: {
+  snackPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "#F1F1F1",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 6,
+    marginLeft: 36,
+  },
+  snackPillText: {
     fontSize: 12,
-    color: C.primary,
-    paddingTop: 6,
-    paddingLeft: 36,
+    color: C.textSecondary,
+    fontWeight: "500" as const,
   },
 
   // Loading state
