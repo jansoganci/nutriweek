@@ -15,7 +15,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import MacroRing from "@/components/MacroRing";
-import { SkeletonPlanCard } from "@/components/SkeletonLoader";
 import colors from "@/constants/colors";
 import type { UserProfile } from "@/constants/types";
 import calculateAll, { type CalculationResults } from "@/services/calculations";
@@ -325,8 +324,6 @@ export default function MealPlanScreen() {
   const [loaded, setLoaded] = useState(false);
   const [streak, setStreak] = useState<number | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [debugRaw, setDebugRaw] = useState<string>("");
-  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -449,33 +446,20 @@ export default function MealPlanScreen() {
         {/* Weekly Plan Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>This Week</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          {weeklyPlan && !isGenerating && (
             <Pressable
+              onPress={handleGenerate}
               hitSlop={8}
-              onPress={async () => {
-                const raw = await AsyncStorage.getItem("debugRaw");
-                setDebugRaw(raw ?? "(debugRaw boş)");
-                setShowDebug(true);
-              }}
+              style={styles.refreshBtn}
             >
-              <Text style={{ fontSize: 13, color: C.textSecondary, textDecorationLine: "underline" }}>RAW</Text>
+              <Text style={styles.refreshIcon}>↻</Text>
             </Pressable>
-            {weeklyPlan && !isGenerating && (
-              <Pressable
-                onPress={handleGenerate}
-                hitSlop={8}
-                style={styles.refreshBtn}
-              >
-                <Text style={styles.refreshIcon}>↻</Text>
-              </Pressable>
-            )}
-          </View>
+          )}
         </View>
 
-        {isGenerating && (
-          <LoadingState />
-        )}
+        {isGenerating && <LoadingState />}
 
+        {/* Error banner — shown above the plan so existing days stay visible */}
         {!isGenerating && planError && (
           <PlanErrorCard error={planError} onRetry={handleGenerate} />
         )}
@@ -486,7 +470,7 @@ export default function MealPlanScreen() {
           </View>
         )}
 
-        {!isGenerating && !planError && weeklyPlan && (
+        {!isGenerating && weeklyPlan && (
           <View style={styles.dayList}>
             {weeklyPlan.days.map((day, dayIndex) => (
               <DayCard
@@ -519,22 +503,6 @@ export default function MealPlanScreen() {
         onDismiss={handleDismiss}
       />
 
-      {/* Debug raw response modal */}
-      <Modal visible={showDebug} transparent animationType="slide">
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)", padding: 16, paddingTop: insets.top + 16 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>debugRaw ({debugRaw.length} chars)</Text>
-            <Pressable onPress={() => setShowDebug(false)} hitSlop={12}>
-              <Text style={{ color: "#FF6B35", fontSize: 16, fontWeight: "700" }}>Kapat</Text>
-            </Pressable>
-          </View>
-          <ScrollView style={{ flex: 1 }}>
-            <Text selectable style={{ color: "#00FF88", fontFamily: "monospace", fontSize: 11, lineHeight: 16 }}>
-              {debugRaw || "(boş)"}
-            </Text>
-          </ScrollView>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -963,6 +931,21 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontWeight: "700" as const,
+  },
+
+  // Refresh error banner
+  refreshErrorCard: {
+    backgroundColor: "#FFF3EE",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: C.primary,
+  },
+  refreshErrorText: {
+    fontSize: 13,
+    color: C.destructive,
+    fontWeight: "500" as const,
+    textAlign: "center",
   },
 
   // FAB

@@ -239,8 +239,7 @@ function parseWeeklyPlan(text: string): MockWeeklyPlan {
   try {
     parsed = JSON.parse(match[0]) as MockWeeklyPlan;
   } catch (error) {
-    console.error("Full error:", JSON.stringify(error));
-    alert("PARSE HATASI - ilk 300 karakter: " + text.substring(0, 300));
+    console.error("[parseWeeklyPlan] JSON.parse failed:", error);
     throw new Error("PARSE_ERROR");
   }
 
@@ -295,12 +294,8 @@ export async function generateWeeklyPlan(
   try {
     rawText = await askGemma(prompt);
     await AsyncStorage.setItem("debugRaw", rawText);
-    // eslint-disable-next-line no-alert
-    alert("CEVAP: " + rawText.substring(0, 300));
   } catch (err) {
-    console.error("Full error:", JSON.stringify(err));
-    alert("GEMMA HATASI: " + (err instanceof Error ? err.message : String(err)));
-    // Re-throw OLLAMA_OFFLINE / OLLAMA_TIMEOUT as-is for the UI to handle
+    console.error("[generateWeeklyPlan] askGemma failed:", err);
     throw err;
   }
 
