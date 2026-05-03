@@ -29,7 +29,7 @@ export interface MockWeeklyPlan {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const OLLAMA_BASE_URL = "https://differently-nano-trans-conventional.trycloudflare.com";
+const OLLAMA_BASE_URL = "https://programmes-maximum-optics-measurements.trycloudflare.com";
 const MODEL = "gemma4:e4b";
 const TIMEOUT_MS = 120_000;
 
@@ -205,7 +205,7 @@ export async function askGemma(prompt: string): Promise<string> {
     const response = await fetch(url, {
       method: "POST",
       headers: NGROK_HEADERS,
-      body: JSON.stringify({ model: MODEL, prompt, stream: false }),
+      body: JSON.stringify({ model: MODEL, prompt, stream: false, options: { num_predict: 2048 } }),
       signal: controller.signal,
     });
 
