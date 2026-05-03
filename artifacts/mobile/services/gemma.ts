@@ -348,117 +348,82 @@ const MOCK_PLAN: MockWeeklyPlan = {
   ],
 };
 
-// ─── Prompt builder ───────────────────────────────────────────────────────────
+// ─── Prompt builders ──────────────────────────────────────────────────────────
 
-function buildMealPlanPrompt(
+function sharedConstraints(calc: CalculationResults, dietStr: string): string {
+  return `Constraints:
+- Total daily calories MUST be exactly ${calc.targetCalories} kcal (±50 kcal tolerance)
+- Daily protein MUST be ${calc.macros.protein}g (±5g), carbs ${calc.macros.carbs}g (±5g), fat ${calc.macros.fat}g (±5g)
+- The four meals MUST sum to the daily totals within the above tolerances
+- Follow FDA 2025 priority: lean protein → dairy → vegetables → whole grains → fruits
+- Meal names MUST be descriptive (e.g., "Grilled Chicken & Quinoa Bowl" not just "Chicken")
+- Include an appropriate food emoji for each meal
+- Exactly 4 meals: Breakfast, Lunch, Dinner, Snack
+- Portion distribution: Breakfast ~25%, Lunch ~30%, Dinner ~35%, Snack ~10% of daily calories${dietStr !== "none" ? `\n- Dietary restrictions: ${dietStr}. All meals must comply.` : ""}`;
+}
+
+function buildSingleDayPrompt(
   profile: UserProfile,
   calc: CalculationResults,
+  dayName: string,
+  date: string,
 ): string {
   const dietStr =
     profile.dietaryPreferences.length > 0
       ? profile.dietaryPreferences.join(", ")
       : "none";
 
-  const today = new Date();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - today.getDay() + 1);
-  const days = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-  ];
-  const dates = days.map((_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d.toISOString().slice(0, 10);
-  });
+  return `You are a nutritionist. Generate a meal plan for ONE day only.
+Return a single valid JSON object. No markdown, no code fences, no extra text. The entire response must pass JSON.parse().
 
-  const exampleDays = days.map((day, i) => ({
-    day,
-    date: dates[i],
-    totalCalories: calc.targetCalories,
-    meals: [
-      {
-        type: "Breakfast",
-        name: "meal name",
-        calories: Math.round(calc.targetCalories * 0.2),
-        emoji: "🥣",
-        protein: Math.round(calc.macros.protein * 0.2),
-        carbs: Math.round(calc.macros.carbs * 0.2),
-        fat: Math.round(calc.macros.fat * 0.2),
-      },
-      {
-        type: "Lunch",
-        name: "meal name",
-        calories: Math.round(calc.targetCalories * 0.3),
-        emoji: "🥗",
-        protein: Math.round(calc.macros.protein * 0.3),
-        carbs: Math.round(calc.macros.carbs * 0.3),
-        fat: Math.round(calc.macros.fat * 0.3),
-      },
-      {
-        type: "Dinner",
-        name: "meal name",
-        calories: Math.round(calc.targetCalories * 0.35),
-        emoji: "🍗",
-        protein: Math.round(calc.macros.protein * 0.35),
-        carbs: Math.round(calc.macros.carbs * 0.35),
-        fat: Math.round(calc.macros.fat * 0.35),
-      },
-      {
-        type: "Snack",
-        name: "meal name",
-        calories: Math.round(calc.targetCalories * 0.1),
-        emoji: "🍎",
-        protein: Math.round(calc.macros.protein * 0.1),
-        carbs: Math.round(calc.macros.carbs * 0.1),
-        fat: Math.round(calc.macros.fat * 0.1),
-      },
-    ],
-  }));
-
-  return `You are a nutritionist. Generate a 7-day meal plan.
-Return a single valid JSON object. No markdown, no code fences, no text before or after the JSON. The entire response must pass JSON.parse().
-
-Constraints:
-- Total daily calories MUST be exactly ${calc.targetCalories} kcal (±50 kcal tolerance)
-- Daily protein MUST be ${calc.macros.protein}g (±5g), carbs ${calc.macros.carbs}g (±5g), fat ${calc.macros.fat}g (±5g)
-- The four meals (Breakfast, Lunch, Dinner, Snack) MUST sum to the daily totals within the above tolerances
-- Follow FDA 2025 priority: lean protein → dairy → vegetables → whole grains → fruits
-- Meal names MUST be descriptive (e.g., "Grilled Chicken & Quinoa Bowl" not just "Chicken")
-- Include an appropriate food emoji for each meal
-- Each day must have exactly 4 meals: Breakfast, Lunch, Dinner, Snack
-- Portion distribution: Breakfast ~25%, Lunch ~30%, Dinner ~35%, Snack ~10% of daily calories
-
-${dietStr !== "none" ? `- Dietary restrictions: ${dietStr}. All meals must comply.` : ""}
+${sharedConstraints(calc, dietStr)}
 
 User: ${profile.age}yo ${profile.gender}, ${profile.weight}kg, ${profile.height}cm, goal: ${profile.goal}, activity: ${profile.activityLevel}
 
-Week starts Monday ${dates[0]}. Generate all 7 days (${days.join(", ")}).
-
-Required JSON structure:
+Generate ONLY for ${dayName} (${date}). Return this exact structure:
 {
-  "weekOf": "${dates[0]}",
-  "days": [
-    {
-      "day": "Monday",
-      "date": "${dates[0]}",
-      "totalCalories": ${calc.targetCalories},
-      "meals": [
-        {"type": "Breakfast", "name": "MEAL NAME HERE", "calories": NUMBER, "emoji": "EMOJI", "protein": NUMBER, "carbs": NUMBER, "fat": NUMBER},
-        {"type": "Lunch", "name": "MEAL NAME HERE", "calories": NUMBER, "emoji": "EMOJI", "protein": NUMBER, "carbs": NUMBER, "fat": NUMBER},
-        {"type": "Dinner", "name": "MEAL NAME HERE", "calories": NUMBER, "emoji": "EMOJI", "protein": NUMBER, "carbs": NUMBER, "fat": NUMBER},
-        {"type": "Snack", "name": "MEAL NAME HERE", "calories": NUMBER, "emoji": "EMOJI", "protein": NUMBER, "carbs": NUMBER, "fat": NUMBER}
-      ]
-    }
+  "day": "${dayName}",
+  "date": "${date}",
+  "totalCalories": ${calc.targetCalories},
+  "meals": [
+    {"type": "Breakfast", "name": "MEAL NAME HERE", "calories": NUMBER, "emoji": "EMOJI", "protein": NUMBER, "carbs": NUMBER, "fat": NUMBER},
+    {"type": "Lunch", "name": "MEAL NAME HERE", "calories": NUMBER, "emoji": "EMOJI", "protein": NUMBER, "carbs": NUMBER, "fat": NUMBER},
+    {"type": "Dinner", "name": "MEAL NAME HERE", "calories": NUMBER, "emoji": "EMOJI", "protein": NUMBER, "carbs": NUMBER, "fat": NUMBER},
+    {"type": "Snack", "name": "MEAL NAME HERE", "calories": NUMBER, "emoji": "EMOJI", "protein": NUMBER, "carbs": NUMBER, "fat": NUMBER}
   ]
 }
 
 IMPORTANT: Replace MEAL NAME HERE, NUMBER, EMOJI with actual values. Do NOT copy the placeholder text.`;
+}
+
+function buildMultiDayPrompt(
+  profile: UserProfile,
+  calc: CalculationResults,
+  dayNames: string[],
+  dates: string[],
+): string {
+  const dietStr =
+    profile.dietaryPreferences.length > 0
+      ? profile.dietaryPreferences.join(", ")
+      : "none";
+
+  const dayList = dayNames.map((d, i) => `- ${d} (${dates[i]})`).join("\n");
+  const exampleEntry = `{"day":"DAY_NAME","date":"DATE","totalCalories":${calc.targetCalories},"meals":[{"type":"Breakfast","name":"MEAL NAME","calories":NUMBER,"emoji":"EMOJI","protein":NUMBER,"carbs":NUMBER,"fat":NUMBER},{"type":"Lunch","name":"MEAL NAME","calories":NUMBER,"emoji":"EMOJI","protein":NUMBER,"carbs":NUMBER,"fat":NUMBER},{"type":"Dinner","name":"MEAL NAME","calories":NUMBER,"emoji":"EMOJI","protein":NUMBER,"carbs":NUMBER,"fat":NUMBER},{"type":"Snack","name":"MEAL NAME","calories":NUMBER,"emoji":"EMOJI","protein":NUMBER,"carbs":NUMBER,"fat":NUMBER}]}`;
+
+  return `You are a nutritionist. Generate meal plans for EXACTLY ${dayNames.length} days.
+Return a single valid JSON object. No markdown, no code fences, no extra text. The entire response must pass JSON.parse().
+
+${sharedConstraints(calc, dietStr)}
+
+User: ${profile.age}yo ${profile.gender}, ${profile.weight}kg, ${profile.height}cm, goal: ${profile.goal}, activity: ${profile.activityLevel}
+
+Generate ONLY for these days:
+${dayList}
+
+Return this exact structure with ${dayNames.length} entries in the "days" array:
+{"days":[${Array(dayNames.length).fill(exampleEntry).join(",")}]}
+
+IMPORTANT: Replace DAY_NAME, DATE, MEAL NAME, NUMBER, EMOJI with actual values for each day. Do NOT copy placeholder text.`;
 }
 
 // ─── Generic Gemma helper ─────────────────────────────────────────────────────
@@ -524,38 +489,110 @@ export async function askGemma(prompt: string): Promise<string> {
   }
 }
 
-// ─── Parse Gemma JSON response ────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function parseWeeklyPlan(text: string): MockWeeklyPlan {
+function normalizeMeals(meals: MockMeal[]): MockMeal[] {
+  return (meals ?? []).map((meal) => ({
+    ...meal,
+    protein: meal.protein ?? 0,
+    carbs: meal.carbs ?? 0,
+    fat: meal.fat ?? 0,
+  }));
+}
+
+function getMockDay(dayName: string, date: string): MockDayPlan {
+  const found = MOCK_PLAN.days.find((d) => d.day === dayName);
+  if (found) return { ...found, date };
+  return {
+    day: dayName,
+    date,
+    totalCalories: 2000,
+    meals: [
+      { type: "Breakfast", name: "Oatmeal & Berries", calories: 400, emoji: "🥣", protein: 15, carbs: 65, fat: 8 },
+      { type: "Lunch", name: "Grilled Chicken Salad", calories: 500, emoji: "🥗", protein: 40, carbs: 30, fat: 15 },
+      { type: "Dinner", name: "Salmon & Vegetables", calories: 650, emoji: "🐟", protein: 45, carbs: 40, fat: 22 },
+      { type: "Snack", name: "Greek Yogurt", calories: 150, emoji: "🥛", protein: 15, carbs: 12, fat: 3 },
+    ],
+  };
+}
+
+// ─── Parse functions ──────────────────────────────────────────────────────────
+
+function parseSingleDay(text: string, dayName: string, date: string): MockDayPlan {
   const match = text.match(/\{[\s\S]*\}/);
-  console.log("[parseWeeklyPlan] regex match success:", !!match);
   if (!match) throw new Error("PARSE_ERROR");
 
-  let parsed: MockWeeklyPlan;
-  try {
-    parsed = JSON.parse(match[0]) as MockWeeklyPlan;
-  } catch (error) {
-    console.error("[parseWeeklyPlan] JSON.parse failed:", error);
+  const parsed = JSON.parse(match[0]) as Record<string, unknown>;
+
+  let day: MockDayPlan;
+  if (parsed.days && Array.isArray(parsed.days) && parsed.days.length > 0) {
+    day = parsed.days[0] as MockDayPlan;
+  } else if (Array.isArray(parsed.meals)) {
+    day = parsed as unknown as MockDayPlan;
+  } else {
     throw new Error("PARSE_ERROR");
   }
 
-  if (!parsed.days || !Array.isArray(parsed.days) || parsed.days.length === 0) {
-    throw new Error("PARSE_ERROR");
-  }
-  console.log("[parseWeeklyPlan] parsed days length:", parsed.days.length);
+  return {
+    day: (day.day as string) || dayName,
+    date: (day.date as string) || date,
+    totalCalories: (day.totalCalories as number) || 0,
+    meals: normalizeMeals(day.meals as MockMeal[]),
+  };
+}
 
-  // Normalise any missing numeric meal fields to 0
-  parsed.days = parsed.days.map((day) => ({
-    ...day,
-    meals: (day.meals ?? []).map((meal) => ({
-      ...meal,
-      protein: (meal as MockMeal).protein ?? 0,
-      carbs: (meal as MockMeal).carbs ?? 0,
-      fat: (meal as MockMeal).fat ?? 0,
-    })),
+function parseMultiDays(text: string, dayNames: string[], dates: string[]): MockDayPlan[] {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("PARSE_ERROR");
+
+  const parsed = JSON.parse(match[0]) as { days?: MockDayPlan[] };
+  if (!parsed.days || !Array.isArray(parsed.days)) throw new Error("PARSE_ERROR");
+
+  return parsed.days.map((day, i) => ({
+    day: day.day || dayNames[i] || "Unknown",
+    date: day.date || dates[i] || "",
+    totalCalories: day.totalCalories || 0,
+    meals: normalizeMeals(day.meals),
   }));
+}
 
-  return parsed;
+// ─── Per-day generators ───────────────────────────────────────────────────────
+
+export async function generateSingleDay(
+  profile: UserProfile,
+  calc: CalculationResults,
+  dayName: string,
+  date: string,
+): Promise<MockDayPlan> {
+  try {
+    const prompt = buildSingleDayPrompt(profile, calc, dayName, date);
+    const rawText = await askGemma(prompt);
+    return parseSingleDay(rawText, dayName, date);
+  } catch (err) {
+    console.warn(`[generateSingleDay] Failed for ${dayName}, using mock:`, err);
+    return getMockDay(dayName, date);
+  }
+}
+
+export async function generateMultiDays(
+  profile: UserProfile,
+  calc: CalculationResults,
+  dayNames: string[],
+  dates: string[],
+): Promise<MockDayPlan[]> {
+  try {
+    const prompt = buildMultiDayPrompt(profile, calc, dayNames, dates);
+    const rawText = await askGemma(prompt);
+    const days = parseMultiDays(rawText, dayNames, dates);
+    while (days.length < dayNames.length) {
+      const i = days.length;
+      days.push(getMockDay(dayNames[i], dates[i]));
+    }
+    return days;
+  } catch (err) {
+    console.warn(`[generateMultiDays] Failed for ${dayNames.join(", ")}, using mocks:`, err);
+    return dayNames.map((name, i) => getMockDay(name, dates[i]));
+  }
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
@@ -563,8 +600,8 @@ function parseWeeklyPlan(text: string): MockWeeklyPlan {
 export async function generateWeeklyPlan(
   userProfile?: UserProfile,
   calculations?: CalculationResults,
+  onProgress?: (days: MockDayPlan[]) => void,
 ): Promise<MockWeeklyPlan> {
-  // Load profile + calculations from AsyncStorage if not provided
   let profile = userProfile;
   let calc = calculations;
 
@@ -572,7 +609,6 @@ export async function generateWeeklyPlan(
     try {
       const raw = await AsyncStorage.getItem("userProfile");
       if (!raw) {
-        // No profile yet — return mock
         await AsyncStorage.setItem("weeklyPlan", JSON.stringify(MOCK_PLAN));
         return MOCK_PLAN;
       }
@@ -584,33 +620,39 @@ export async function generateWeeklyPlan(
     }
   }
 
-  const prompt = buildMealPlanPrompt(profile, calc);
+  const today = new Date();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - today.getDay() + 1);
+  const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const dates = DAY_NAMES.map((_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
 
-  let rawText: string;
-  try {
-    rawText = await askGemma(prompt);
-    await AsyncStorage.setItem("debugRaw", rawText);
-  } catch (err) {
-    console.error("[generateWeeklyPlan] askGemma failed:", err);
-    throw err;
+  const accumulated: MockDayPlan[] = [];
+  function handleProgress(newDays: MockDayPlan[]) {
+    newDays.forEach((day) => {
+      const idx = accumulated.findIndex((d) => d.day === day.day);
+      if (idx >= 0) accumulated[idx] = day;
+      else accumulated.push(day);
+    });
+    accumulated.sort((a, b) => DAY_NAMES.indexOf(a.day) - DAY_NAMES.indexOf(b.day));
+    onProgress?.([...accumulated]);
   }
 
-  let plan: MockWeeklyPlan;
-  try {
-    plan = parseWeeklyPlan(rawText);
-  } catch (error) {
-    console.error("Full error:", JSON.stringify(error));
-    console.warn(
-      "[gemma] Failed to parse Gemma response — falling back to mock plan",
-    );
-    console.warn("[gemma] Raw response:", rawText);
-    plan = MOCK_PLAN;
-  }
+  const [mon, tue, wedToSun] = await Promise.all([
+    generateSingleDay(profile, calc, "Monday", dates[0]).then((day) => { handleProgress([day]); return day; }),
+    generateSingleDay(profile, calc, "Tuesday", dates[1]).then((day) => { handleProgress([day]); return day; }),
+    generateMultiDays(profile, calc, DAY_NAMES.slice(2), dates.slice(2)).then((days) => { handleProgress(days); return days; }),
+  ]);
 
+  const allDays: MockDayPlan[] = [mon, tue, ...wedToSun];
+  allDays.sort((a, b) => DAY_NAMES.indexOf(a.day) - DAY_NAMES.indexOf(b.day));
+
+  const plan: MockWeeklyPlan = { weekOf: dates[0], days: allDays };
   await AsyncStorage.setItem("weeklyPlan", JSON.stringify(plan));
-  console.log(
-    "[generateWeeklyPlan] weeklyPlan saved to AsyncStorage successfully",
-  );
+  console.log("[generateWeeklyPlan] weeklyPlan saved to AsyncStorage successfully");
   return plan;
 }
 

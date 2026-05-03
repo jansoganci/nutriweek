@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import MacroRing from "@/components/MacroRing";
+import { SkeletonPlanCard } from "@/components/SkeletonLoader";
 import colors from "@/constants/colors";
 import type { UserProfile } from "@/constants/types";
 import calculateAll, { type CalculationResults } from "@/services/calculations";
@@ -324,6 +325,9 @@ export default function MealPlanScreen() {
   const [loaded, setLoaded] = useState(false);
   const [streak, setStreak] = useState<number | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [partialDays, setPartialDays] = useState<(MockDayPlan | null)[] | null>(null);
+
+  const loadedDays = partialDays ? partialDays.filter((d) => d !== null).length : 0;
 
   useEffect(() => {
     async function init() {
@@ -365,15 +369,27 @@ export default function MealPlanScreen() {
   );
 
   const handleGenerate = useCallback(async () => {
+    const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     setShowModal(false);
     setShowEmpty(false);
     setPlanError(null);
     setRefreshError(null);
     setIsGenerating(true);
+    setPartialDays(Array(7).fill(null));
     try {
-      const plan = await generateWeeklyPlan();
-      console.log("[home:handleGenerate] weeklyPlan received from generateWeeklyPlan():", plan.days?.length ?? 0);
+      const plan = await generateWeeklyPlan(undefined, undefined, (days) => {
+        setPartialDays(() => {
+          const next: (MockDayPlan | null)[] = Array(7).fill(null);
+          days.forEach((day) => {
+            const idx = DAY_NAMES.indexOf(day.day);
+            if (idx >= 0) next[idx] = day;
+          });
+          return next;
+        });
+      });
+      console.log("[home:handleGenerate] weeklyPlan received:", plan.days?.length ?? 0);
       setWeeklyPlan(plan);
+      setPartialDays(null);
     } catch (err) {
       const message = getPlanErrorMessage(err);
       setRefreshError(message);
@@ -386,6 +402,7 @@ export default function MealPlanScreen() {
         Alert.alert("Oops!", message);
         setShowEmpty(true);
       }
+      setPartialDays(null);
     } finally {
       setIsGenerating(false);
     }
@@ -457,7 +474,27 @@ export default function MealPlanScreen() {
           )}
         </View>
 
-        {isGenerating && <LoadingState />}
+        {/* Progressive plan during generation */}
+        {isGenerating && (
+          <View style={styles.dayList}>
+            <View style={styles.progressIndicator}>
+              <Text style={styles.progressIndicatorText}>🦝 {loadedDays}/7 days ready</Text>
+            </View>
+            {(partialDays ?? Array(7).fill(null)).map((day, i) =>
+              day ? (
+                <DayCard
+                  key={day.date || String(i)}
+                  day={day}
+                  isToday={day.date === today}
+                  isExpanded={expandedDay === day.date}
+                  onToggle={() => toggleDay(day.date)}
+                />
+              ) : (
+                <SkeletonPlanCard key={`skel-${i}`} />
+              )
+            )}
+          </View>
+        )}
 
         {/* Error banner — shown above the plan so existing days stay visible */}
         {!isGenerating && planError && (
@@ -931,6 +968,25 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontWeight: "700" as const,
+  },
+
+  // Progress indicator (shown during parallel generation)
+  progressIndicator: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: C.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    ...CARD_SHADOW,
+  },
+  progressIndicatorText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: C.primary,
   },
 
   // Refresh error banner
