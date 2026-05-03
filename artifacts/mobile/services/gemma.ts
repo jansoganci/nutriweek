@@ -478,7 +478,7 @@ export async function askGemma(prompt: string): Promise<string> {
         model: MODEL,
         prompt,
         stream: false,
-        options: { num_predict: 4096, temperature: 0.7 },
+        options: { num_predict: 4096 },
       }),
       signal: controller.signal,
     });
