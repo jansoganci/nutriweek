@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert } from "react-native";
 
 import type { UserProfile } from "@/constants/types";
 import calculateAll, { type CalculationResults } from "@/services/calculations";
@@ -224,9 +225,11 @@ export async function askGemma(prompt: string): Promise<string> {
     }
 
     const data = (await response.json()) as { response?: string };
+    const text = data.response ?? "";
     console.log("[askGemma] Raw response structure:", JSON.stringify(data));
-    console.log("[askGemma] Response length:", (data.response ?? "").length, "chars");
-    return data.response ?? "";
+    console.log("[askGemma] Response length:", text.length, "chars");
+    Alert.alert("RAW RESPONSE (first 500):\n" + text.substring(0, 500));
+    return text;
   } catch (err) {
     clearTimeout(timeoutId);
     if (err instanceof Error) {
