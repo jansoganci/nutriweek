@@ -152,30 +152,44 @@ function buildMealPlanPrompt(profile: UserProfile, calc: CalculationResults): st
     ],
   }));
 
-  return `You are a nutrition expert. Generate a 7-day meal plan.
-Return ONLY a valid JSON object. No explanation, no markdown, no extra text. Just the raw JSON.
+  return `You are a nutritionist. Generate a 7-day meal plan.
+Return a single valid JSON object. No markdown, no code fences, no text before or after the JSON. The entire response must pass JSON.parse().
 
-User profile:
-- Age: ${profile.age}
-- Gender: ${profile.gender}
-- Weight: ${profile.weight}kg
-- Height: ${profile.height}cm
-- Goal: ${profile.goal} (cut = lose fat, bulk = build muscle, maintain = stay balanced)
-- Activity: ${profile.activityLevel}
-- Dietary preferences: ${dietStr}
-- Daily calorie target: ${calc.targetCalories} kcal
-- Protein target: ${calc.macros.protein}g
-- Carbs target: ${calc.macros.carbs}g
-- Fat target: ${calc.macros.fat}g
+Constraints:
+- Total daily calories MUST be exactly ${calc.targetCalories} kcal (±50 kcal tolerance)
+- Daily protein MUST be ${calc.macros.protein}g (±5g), carbs ${calc.macros.carbs}g (±5g), fat ${calc.macros.fat}g (±5g)
+- The four meals (Breakfast, Lunch, Dinner, Snack) MUST sum to the daily totals within the above tolerances
+- Follow FDA 2025 priority: lean protein → dairy → vegetables → whole grains → fruits
+- Meal names MUST be descriptive (e.g., "Grilled Chicken & Quinoa Bowl" not just "Chicken")
+- Include an appropriate food emoji for each meal
+- Each day must have exactly 4 meals: Breakfast, Lunch, Dinner, Snack
+- Portion distribution: Breakfast ~25%, Lunch ~30%, Dinner ~35%, Snack ~10% of daily calories
 
-Follow FDA 2025 dietary guidelines:
-Priority order: lean protein first, dairy second, vegetables third, whole grains and fruits last.
+${dietStr !== "none" ? `- Dietary restrictions: ${dietStr}. All meals must comply.` : ""}
 
-Return this exact JSON structure:
-${JSON.stringify({ weekOf: dates[0], days: exampleDays }, null, 2)}
+User: ${profile.age}yo ${profile.gender}, ${profile.weight}kg, ${profile.height}cm, goal: ${profile.goal}, activity: ${profile.activityLevel}
 
-Generate exactly 7 days: Monday through Sunday.
-Make sure total daily calories are close to ${calc.targetCalories}.`;
+Week starts Monday ${dates[0]}. Generate all 7 days (${days.join(", ")}).
+
+Required JSON structure:
+{
+  "weekOf": "${dates[0]}",
+  "days": [
+    {
+      "day": "Monday",
+      "date": "${dates[0]}",
+      "totalCalories": ${calc.targetCalories},
+      "meals": [
+        {"type": "Breakfast", "name": "MEAL NAME HERE", "calories": NUMBER, "emoji": "EMOJI", "protein": NUMBER, "carbs": NUMBER, "fat": NUMBER},
+        {"type": "Lunch", "name": "MEAL NAME HERE", "calories": NUMBER, "emoji": "EMOJI", "protein": NUMBER, "carbs": NUMBER, "fat": NUMBER},
+        {"type": "Dinner", "name": "MEAL NAME HERE", "calories": NUMBER, "emoji": "EMOJI", "protein": NUMBER, "carbs": NUMBER, "fat": NUMBER},
+        {"type": "Snack", "name": "MEAL NAME HERE", "calories": NUMBER, "emoji": "EMOJI", "protein": NUMBER, "carbs": NUMBER, "fat": NUMBER}
+      ]
+    }
+  ]
+}
+
+IMPORTANT: Replace MEAL NAME HERE, NUMBER, EMOJI with actual values. Do NOT copy the placeholder text.`;
 }
 
 // ─── Generic Gemma helper ─────────────────────────────────────────────────────
