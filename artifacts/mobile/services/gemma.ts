@@ -30,7 +30,7 @@ export interface MockWeeklyPlan {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const OLLAMA_BASE_URL = "https://programmes-maximum-optics-measurements.trycloudflare.com";
+const OLLAMA_BASE_URL = "https://nutriweek.emlakcrm.app";
 const MODEL = "gemma4:e4b";
 const TIMEOUT_MS = 120_000;
 
