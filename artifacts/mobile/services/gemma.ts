@@ -29,7 +29,7 @@ export interface MockWeeklyPlan {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const OLLAMA_BASE_URL = "https://programmes-maximum-optics-measurements.trycloudflare.com";
+const OLLAMA_BASE_URL = "https://differently-nano-trans-conventional.trycloudflare.com";
 const MODEL = "gemma4:e4b";
 const TIMEOUT_MS = 120_000;
 
