@@ -1,0 +1,9 @@
+// Shared app configuration. Keep this file committed.
+// Fallback placeholders ensure Info.plist keys always exist.
+SUPABASE_URL = https://msubhygmuncimchkrqvl.supabase.co
+SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zdWJoeWdtdW5jaW1jaGtycXZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MjMwODUsImV4cCI6MjA5MzQ5OTA4NX0.xf0WDyHZSX3Mhx-znFoDShY9uBl5UHIbwfuKepo_slo
+#include "Secrets.xcconfig"
+
+// Expose values to runtime via generated Info.plist entries.
+INFOPLIST_KEY_SUPABASE_URL = $(SUPABASE_URL)
+INFOPLIST_KEY_SUPABASE_ANON_KEY = $(SUPABASE_ANON_KEY)
