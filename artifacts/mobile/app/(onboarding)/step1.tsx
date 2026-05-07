@@ -1,8 +1,8 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
   Platform,
@@ -19,6 +19,7 @@ import RockyMascot from "@/components/RockyMascot";
 import StepProgress from "@/components/StepProgress";
 import colors from "@/constants/colors";
 import type { ActivityLevel, Gender } from "@/constants/types";
+import { fetchOnboardingProfile, saveStep1 } from "@/services/onboarding";
 
 const C = colors.light;
 
@@ -103,6 +104,8 @@ export default function Step1Screen() {
   const [activityLevel, setActivityLevel] = useState<ActivityLevel | null>(
     null
   );
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const rockyMessage =
     activityLevel !== null
@@ -122,8 +125,23 @@ export default function Step1Screen() {
   const shakeWeight = useRef(new Animated.Value(0)).current;
   const shakeActivity = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    fetchOnboardingProfile()
+      .then((profile) => {
+        if (!profile) return;
+        if (profile.gender) setGender(profile.gender as Gender);
+        if (profile.age != null) setAge(String(profile.age));
+        if (profile.height_cm != null) setHeight(String(profile.height_cm));
+        if (profile.weight_kg != null) setWeight(String(profile.weight_kg));
+        if (profile.activity_level) setActivityLevel(profile.activity_level as ActivityLevel);
+      })
+      .catch(() => {
+        // silent prefill failure
+      });
+  }, []);
+
   const handleContinue = async () => {
-    if (!isComplete) {
+    if (!isComplete || saving) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       if (gender === null) shake(shakeGender);
       if (age.trim() === "") shake(shakeAge);
@@ -134,22 +152,24 @@ export default function Step1Screen() {
     }
 
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setErrorMessage(null);
+    setSaving(true);
 
-    const existing = await AsyncStorage.getItem("userProfile");
-    const parsed = existing ? JSON.parse(existing) : {};
-    await AsyncStorage.setItem(
-      "userProfile",
-      JSON.stringify({
-        ...parsed,
+    try {
+      await saveStep1({
         gender,
         age: Number(age),
-        height: Number(height),
-        weight: Number(weight),
+        heightCm: Number(height),
+        weightKg: Number(weight),
         activityLevel,
-      })
-    );
-
-    router.push("/(onboarding)/step2");
+      });
+      router.push("/(onboarding)/step2");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save step 1.";
+      setErrorMessage(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleActivitySelect = (value: ActivityLevel) => {
@@ -295,12 +315,18 @@ export default function Step1Screen() {
         <Pressable
           style={[
             styles.continueBtn,
-            { backgroundColor: isComplete ? C.primary : "#CCCCCC" },
+            { backgroundColor: isComplete && !saving ? C.primary : "#CCCCCC" },
           ]}
           onPress={handleContinue}
+          disabled={saving}
         >
-          <Text style={styles.continueBtnText}>Continue</Text>
+          {saving ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.continueBtnText}>Continue</Text>
+          )}
         </Pressable>
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -433,5 +459,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700" as const,
     color: "#FFFFFF",
+  },
+  errorText: {
+    marginTop: 12,
+    textAlign: "center",
+    color: C.destructive,
+    fontSize: 13,
   },
 });

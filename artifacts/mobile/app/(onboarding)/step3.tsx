@@ -1,8 +1,8 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import RockyMascot from "@/components/RockyMascot";
 import StepProgress from "@/components/StepProgress";
 import colors from "@/constants/colors";
+import { saveStep3 } from "@/services/onboarding";
 
 const C = colors.light;
 
@@ -39,6 +40,8 @@ export default function Step3Screen() {
   const insets = useSafeAreaInsets();
   const [values, setValues] = useState<Measurements>({});
   const [hasTyped, setHasTyped] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const hasAnyValue = Object.values(values).some((v) => v && v.trim() !== "");
   const rockyMessage = hasTyped
@@ -51,29 +54,29 @@ export default function Step3Screen() {
   };
 
   const saveAndNavigate = async () => {
+    if (saving) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    const existing = await AsyncStorage.getItem("userProfile");
-    const parsed = existing ? JSON.parse(existing) : {};
-
-    const measurements: Record<string, number> = {};
-    for (const field of FIELDS) {
-      const val = values[field.key];
-      if (val && val.trim() !== "") {
-        measurements[field.key] = Number(val);
-      }
+    setErrorMessage(null);
+    setSaving(true);
+    try {
+      await saveStep3({
+        waistCm: values.waist ? Number(values.waist) : undefined,
+        hipsCm: values.hips ? Number(values.hips) : undefined,
+        chestCm: values.chest ? Number(values.chest) : undefined,
+        leftArmCm: values.arm ? Number(values.arm) : undefined,
+        leftLegCm: values.leg ? Number(values.leg) : undefined,
+      });
+      router.push("/(onboarding)/step4");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save step 3.";
+      setErrorMessage(message);
+    } finally {
+      setSaving(false);
     }
-
-    const updated = {
-      ...parsed,
-      ...(Object.keys(measurements).length > 0 ? { measurements } : {}),
-    };
-
-    await AsyncStorage.setItem("userProfile", JSON.stringify(updated));
-    router.push("/(onboarding)/step4");
   };
 
   const handleSkip = () => {
+    if (saving) return;
     Haptics.selectionAsync();
     router.push("/(onboarding)/step4");
   };
@@ -135,9 +138,15 @@ export default function Step3Screen() {
         <Pressable
           style={[styles.continueBtn, { backgroundColor: C.primary }]}
           onPress={saveAndNavigate}
+          disabled={saving}
         >
-          <Text style={styles.continueBtnText}>Continue</Text>
+          {saving ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.continueBtnText}>Continue</Text>
+          )}
         </Pressable>
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -247,5 +256,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700" as const,
     color: "#FFFFFF",
+  },
+  errorText: {
+    marginTop: 12,
+    textAlign: "center",
+    color: C.destructive,
+    fontSize: 13,
   },
 });

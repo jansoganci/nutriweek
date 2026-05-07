@@ -1,8 +1,8 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +15,7 @@ import RockyMascot from "@/components/RockyMascot";
 import StepProgress from "@/components/StepProgress";
 import colors from "@/constants/colors";
 import type { Goal } from "@/constants/types";
+import { fetchOnboardingProfile, saveStep2 } from "@/services/onboarding";
 
 const C = colors.light;
 
@@ -54,9 +55,21 @@ const ROCKY_MESSAGES: Record<string, string> = {
 export default function Step2Screen() {
   const insets = useSafeAreaInsets();
   const [goal, setGoal] = useState<Goal | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const rockyMessage = goal ? ROCKY_MESSAGES[goal] : ROCKY_MESSAGES.default;
   const isComplete = goal !== null;
+
+  useEffect(() => {
+    fetchOnboardingProfile()
+      .then((profile) => {
+        if (profile?.goal) setGoal(profile.goal as Goal);
+      })
+      .catch(() => {
+        // silent prefill failure
+      });
+  }, []);
 
   const handleSelect = (value: Goal) => {
     setGoal(value);
@@ -64,18 +77,20 @@ export default function Step2Screen() {
   };
 
   const handleContinue = async () => {
-    if (!isComplete) return;
+    if (!isComplete || saving) return;
 
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    const existing = await AsyncStorage.getItem("userProfile");
-    const parsed = existing ? JSON.parse(existing) : {};
-    await AsyncStorage.setItem(
-      "userProfile",
-      JSON.stringify({ ...parsed, goal })
-    );
-
-    router.push("/(onboarding)/step3");
+    setSaving(true);
+    setErrorMessage(null);
+    try {
+      await saveStep2(goal);
+      router.push("/(onboarding)/step3");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save step 2.";
+      setErrorMessage(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -132,12 +147,18 @@ export default function Step2Screen() {
       <Pressable
         style={[
           styles.continueBtn,
-          { backgroundColor: isComplete ? C.primary : "#CCCCCC" },
+          { backgroundColor: isComplete && !saving ? C.primary : "#CCCCCC" },
         ]}
         onPress={handleContinue}
+        disabled={saving}
       >
-        <Text style={styles.continueBtnText}>Continue</Text>
+        {saving ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.continueBtnText}>Continue</Text>
+        )}
       </Pressable>
+      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
     </ScrollView>
   );
 }
@@ -238,5 +259,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700" as const,
     color: "#FFFFFF",
+  },
+  errorText: {
+    marginTop: 12,
+    textAlign: "center",
+    color: C.destructive,
+    fontSize: 13,
   },
 });

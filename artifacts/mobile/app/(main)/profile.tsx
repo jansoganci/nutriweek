@@ -22,6 +22,7 @@ import type {
   UserProfile,
 } from "@/constants/types";
 import calculateAll, { type CalculationResults } from "@/services/calculations";
+import { supabase } from "@/services/supabaseClient";
 
 const C = colors.light;
 
@@ -144,6 +145,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [results, setResults] = useState<CalculationResults | null>(null);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
 
   const [editingInfo, setEditingInfo] = useState(false);
   const [infoFields, setInfoFields] = useState<EditablePersonalInfo>({
@@ -179,33 +181,90 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     async function load() {
-      const raw = await AsyncStorage.getItem("userProfile");
-      if (!raw) return;
-      const p = JSON.parse(raw) as UserProfile;
-      setProfile(p);
+      try {
+        setLoadingError(null);
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError || !authData.user) {
+          throw new Error("AUTH_REQUIRED");
+        }
 
-      const calc = calculateAll(p);
-      setResults(calc);
+        const userId = authData.user.id;
+        const { data: profileRow, error: profileError } = await supabase
+          .from("profiles")
+          .select("gender, age, height_cm, weight_kg, activity_level, goal, dietary_preferences, onboarding_complete")
+          .eq("user_id", userId)
+          .maybeSingle();
 
-      const m = p.measurements ?? {};
-      const fields: EditablePersonalInfo = {
-        age: String(p.age),
-        gender: p.gender,
-        height: String(p.height),
-        weight: String(p.weight),
-        activityLevel: p.activityLevel,
-      };
-      const meas: EditableMeasurements = {
-        waist: m.waist != null ? String(m.waist) : "",
-        hips: m.hips != null ? String(m.hips) : "",
-        chest: m.chest != null ? String(m.chest) : "",
-        arms: m.arms != null ? String(m.arms) : "",
-        thighs: m.thighs != null ? String(m.thighs) : "",
-      };
-      setInfoFields(fields);
-      setInfoFieldsDraft(fields);
-      setMeasFields(meas);
-      setMeasFieldsDraft(meas);
+        if (profileError) throw new Error(profileError.message);
+        if (!profileRow) {
+          throw new Error("Profile not found. Please complete onboarding again.");
+        }
+
+        const { data: latestMeasurement, error: measurementError } = await supabase
+          .from("body_measurements")
+          .select("waist_cm, hips_cm, chest_cm, left_arm_cm, left_leg_cm")
+          .eq("user_id", userId)
+          .order("measured_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (measurementError) {
+          console.warn("[Profile] Failed to load measurements:", measurementError.message);
+        }
+
+        const measurements: BodyMeasurements | undefined = latestMeasurement
+          ? {
+              waist: latestMeasurement.waist_cm ?? undefined,
+              hips: latestMeasurement.hips_cm ?? undefined,
+              chest: latestMeasurement.chest_cm ?? undefined,
+              arms: latestMeasurement.left_arm_cm ?? undefined,
+              thighs: latestMeasurement.left_leg_cm ?? undefined,
+            }
+          : undefined;
+
+        const p: UserProfile = {
+          gender: (profileRow.gender ?? "other") as UserProfile["gender"],
+          age: Number(profileRow.age ?? 0),
+          height: Number(profileRow.height_cm ?? 0),
+          weight: Number(profileRow.weight_kg ?? 0),
+          activityLevel: (profileRow.activity_level ?? "sedentary") as ActivityLevel,
+          goal: (profileRow.goal ?? "maintain") as Goal,
+          measurements,
+          dietaryPreferences: Array.isArray(profileRow.dietary_preferences)
+            ? (profileRow.dietary_preferences as DietaryPreference[])
+            : [],
+          onboardingComplete: Boolean(profileRow.onboarding_complete),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        setProfile(p);
+        setResults(calculateAll(p));
+
+        const m = p.measurements ?? {};
+        const fields: EditablePersonalInfo = {
+          age: String(p.age),
+          gender: p.gender,
+          height: String(p.height),
+          weight: String(p.weight),
+          activityLevel: p.activityLevel,
+        };
+        const meas: EditableMeasurements = {
+          waist: m.waist != null ? String(m.waist) : "",
+          hips: m.hips != null ? String(m.hips) : "",
+          chest: m.chest != null ? String(m.chest) : "",
+          arms: m.arms != null ? String(m.arms) : "",
+          thighs: m.thighs != null ? String(m.thighs) : "",
+        };
+        setInfoFields(fields);
+        setInfoFieldsDraft(fields);
+        setMeasFields(meas);
+        setMeasFieldsDraft(meas);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load profile.";
+        console.error("[Profile] load failed:", message);
+        setLoadingError(message);
+      }
     }
     load();
   }, []);
@@ -243,8 +302,49 @@ export default function ProfileScreen() {
       updatedAt: new Date().toISOString(),
     };
     const calc = calculateAll(updated);
-    await AsyncStorage.setItem("userProfile", JSON.stringify(updated));
-    await AsyncStorage.setItem("calculationResults", JSON.stringify(calc));
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      Alert.alert("Session error", "Please sign in again.");
+      return;
+    }
+    const userId = authData.user.id;
+    const { error: profileError } = await supabase.from("profiles").upsert(
+      {
+        user_id: userId,
+        gender: updated.gender,
+        age: updated.age,
+        height_cm: updated.height,
+        weight_kg: updated.weight,
+        activity_level: updated.activityLevel,
+      },
+      { onConflict: "user_id" },
+    );
+    if (profileError) {
+      Alert.alert("Save failed", profileError.message);
+      return;
+    }
+    const { error: targetsError } = await supabase.from("nutrition_targets").upsert(
+      {
+        user_id: userId,
+        bmi: calc.bmi,
+        bmi_category: calc.bmiCategory.label,
+        bmr: calc.bmr,
+        tdee: calc.tdee,
+        target_calories: calc.targetCalories,
+        protein_g: calc.macros.protein,
+        carbs_g: calc.macros.carbs,
+        fat_g: calc.macros.fat,
+        protein_pct: calc.macroPercentages.protein,
+        carbs_pct: calc.macroPercentages.carbs,
+        fat_pct: calc.macroPercentages.fat,
+        calculated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
+    if (targetsError) {
+      Alert.alert("Save failed", targetsError.message);
+      return;
+    }
     setProfile(updated);
     setResults(calc);
     setInfoFields(infoFieldsDraft);
@@ -267,7 +367,23 @@ export default function ProfileScreen() {
       measurements,
       updatedAt: new Date().toISOString(),
     };
-    await AsyncStorage.setItem("userProfile", JSON.stringify(updated));
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      Alert.alert("Session error", "Please sign in again.");
+      return;
+    }
+    const { error: measurementError } = await supabase.from("body_measurements").insert({
+      user_id: authData.user.id,
+      waist_cm: measurements.waist ?? null,
+      hips_cm: measurements.hips ?? null,
+      chest_cm: measurements.chest ?? null,
+      left_arm_cm: measurements.arms ?? null,
+      left_leg_cm: measurements.thighs ?? null,
+    });
+    if (measurementError) {
+      Alert.alert("Save failed", measurementError.message);
+      return;
+    }
     setProfile(updated);
     setMeasFields(measFieldsDraft);
     setEditingMeasurements(false);
@@ -300,7 +416,9 @@ export default function ProfileScreen() {
   if (!profile || !results) {
     return (
       <View style={[styles.centered, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>Loading profile… 🦝</Text>
+        <Text style={styles.loadingText}>
+          {loadingError ? `Profile failed to load: ${loadingError}` : "Loading profile… 🦝"}
+        </Text>
       </View>
     );
   }

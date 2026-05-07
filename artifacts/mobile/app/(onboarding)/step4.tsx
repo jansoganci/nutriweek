@@ -1,8 +1,8 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import RockyMascot from "@/components/RockyMascot";
 import StepProgress from "@/components/StepProgress";
 import colors from "@/constants/colors";
+import { saveStep4 } from "@/services/onboarding";
 
 const C = colors.light;
 
@@ -51,6 +52,8 @@ function getRockyMessage(selected: DietKey[]): string {
 export default function Step4Screen() {
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<DietKey[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const rockyMessage = getRockyMessage(selected);
 
@@ -69,14 +72,19 @@ export default function Step4Screen() {
   };
 
   const handleContinue = async () => {
+    if (saving) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const existing = await AsyncStorage.getItem("userProfile");
-    const parsed = existing ? JSON.parse(existing) : {};
-    await AsyncStorage.setItem(
-      "userProfile",
-      JSON.stringify({ ...parsed, dietaryPreferences: selected })
-    );
-    router.push("/(onboarding)/results");
+    setErrorMessage(null);
+    setSaving(true);
+    try {
+      await saveStep4(selected);
+      router.push("/(onboarding)/results");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save step 4.";
+      setErrorMessage(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Split options into rows of 2
@@ -143,9 +151,15 @@ export default function Step4Screen() {
       <Pressable
         style={[styles.continueBtn, { backgroundColor: C.primary }]}
         onPress={handleContinue}
+        disabled={saving}
       >
-        <Text style={styles.continueBtnText}>See My Results</Text>
+        {saving ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.continueBtnText}>See My Results</Text>
+        )}
       </Pressable>
+      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
     </ScrollView>
   );
 }
@@ -244,5 +258,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700" as const,
     color: "#FFFFFF",
+  },
+  errorText: {
+    marginTop: 12,
+    textAlign: "center",
+    color: C.destructive,
+    fontSize: 13,
   },
 });

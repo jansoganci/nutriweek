@@ -52,8 +52,11 @@ export async function searchFoods(query: string): Promise<FoodSearchResult[]> {
 
   let response: Response;
   try {
+    console.log("[USDA] fetch start", { url, query: query.trim() });
     response = await fetch(url);
-  } catch {
+    console.log("[USDA] fetch success", { url, status: response.status, ok: response.ok });
+  } catch (error) {
+    console.log("[USDA] fetch failed", { url, error });
     throw new Error("NETWORK_ERROR");
   }
 

@@ -27,6 +27,10 @@ node_modules
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# Environment
+.env
+!.env.example
+
 # misc
 /.sass-cache
 /connect.lock
@@ -47,3 +51,5 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+.derived/
+.tmp_build*.txt

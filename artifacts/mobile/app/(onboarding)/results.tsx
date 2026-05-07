@@ -1,8 +1,8 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,10 +15,11 @@ import RockyMascot from "@/components/RockyMascot";
 import colors from "@/constants/colors";
 import type { Goal, UserProfile } from "@/constants/types";
 import calculateAll, { type CalculationResults } from "@/services/calculations";
+import { fetchOnboardingProfile, saveResults } from "@/services/onboarding";
 
 const C = colors.light;
 
-// Fallback shown while AsyncStorage loads
+// Fallback shown while profile loads
 const FALLBACK_RESULTS: CalculationResults = {
   bmi: 0,
   bmiCategory: { label: "Healthy", color: "#4CAF50" },
@@ -106,6 +107,8 @@ export default function ResultsScreen() {
   const [results, setResults] = useState<CalculationResults>(FALLBACK_RESULTS);
   const [goal, setGoal] = useState<Goal>("maintain");
   const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (loaded && results.bmi === 0) {
@@ -114,40 +117,43 @@ export default function ResultsScreen() {
   }, [loaded, results.bmi]);
 
   useEffect(() => {
-    AsyncStorage.getItem("userProfile").then((raw) => {
-      console.log("[NutriWeek] userProfile raw:", raw);
-
-      if (raw) {
-        const profile = JSON.parse(raw) as UserProfile;
-        console.log("[NutriWeek] userProfile parsed:", JSON.stringify(profile, null, 2));
-
+    fetchOnboardingProfile()
+      .then((profile) => {
         if (
-          profile.weight &&
-          profile.height &&
+          profile?.weight_kg &&
+          profile.height_cm &&
           profile.age &&
           profile.gender &&
-          profile.activityLevel &&
+          profile.activity_level &&
           profile.goal
         ) {
-          const calc = calculateAll(profile);
-          console.log("[NutriWeek] calculationResults:", JSON.stringify(calc, null, 2));
+          const calcProfile: UserProfile = {
+            gender: profile.gender as UserProfile["gender"],
+            age: Number(profile.age),
+            height: Number(profile.height_cm),
+            weight: Number(profile.weight_kg),
+            activityLevel: profile.activity_level as UserProfile["activityLevel"],
+            goal: profile.goal as UserProfile["goal"],
+            dietaryPreferences: Array.isArray(profile.dietary_preferences)
+              ? (profile.dietary_preferences as UserProfile["dietaryPreferences"])
+              : [],
+            onboardingComplete: Boolean(profile.onboarding_complete),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          const calc = calculateAll(calcProfile);
           setResults(calc);
-          setGoal(profile.goal as Goal);
-        } else {
-          console.warn("[NutriWeek] Guard failed — missing required fields:", {
-            weight: profile.weight,
-            height: profile.height,
-            age: profile.age,
-            gender: profile.gender,
-            activityLevel: profile.activityLevel,
-            goal: profile.goal,
-          });
+          setGoal(calcProfile.goal as Goal);
         }
-      } else {
-        console.warn("[NutriWeek] No userProfile found in AsyncStorage");
-      }
-      setLoaded(true);
-    });
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : "Failed to load profile.";
+        setErrorMessage(message);
+      })
+      .finally(() => {
+        setLoaded(true);
+      });
   }, []);
 
   const { bmi, bmiCategory, targetCalories, macros, macroPercentages } = results;
@@ -176,8 +182,31 @@ export default function ResultsScreen() {
   }
 
   const handleStart = async () => {
+    if (saving) return;
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.replace("/(main)");
+    setSaving(true);
+    setErrorMessage(null);
+    try {
+      await saveResults({
+        bmi: results.bmi,
+        bmiCategory: results.bmiCategory.label,
+        bmr: results.bmr,
+        tdee: results.tdee,
+        targetCalories: results.targetCalories,
+        proteinG: results.macros.protein,
+        carbsG: results.macros.carbs,
+        fatG: results.macros.fat,
+        proteinPct: results.macroPercentages.protein,
+        carbsPct: results.macroPercentages.carbs,
+        fatPct: results.macroPercentages.fat,
+      });
+      router.replace("/(main)");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save results.";
+      setErrorMessage(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -291,8 +320,13 @@ export default function ResultsScreen() {
 
       {/* CTA */}
       <Pressable style={styles.cta} onPress={handleStart}>
-        <Text style={styles.ctaText}>Let's Start! 🦝</Text>
+        {saving ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.ctaText}>Let's Start! 🦝</Text>
+        )}
       </Pressable>
+      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
     </ScrollView>
   );
 }
@@ -511,5 +545,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700" as const,
     color: "#FFFFFF",
+  },
+  errorText: {
+    marginTop: 8,
+    textAlign: "center",
+    color: C.destructive,
+    fontSize: 13,
   },
 });
