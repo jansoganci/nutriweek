@@ -22,13 +22,15 @@ final class AppCoordinator {
         authViewModel: AuthViewModel,
         onboardingRepository: OnboardingRepositoryProtocol,
         mealPlanRepository: MealPlanRepositoryProtocol,
-        foodLogRepository: FoodLogRepositoryProtocol
+        foodLogRepository: FoodLogRepositoryProtocol,
+        streakService: StreakService? = nil
     ) {
         self.authCoordinator = AuthCoordinator(authViewModel: authViewModel)
         self.onboardingCoordinator = OnboardingCoordinator()
         self.mainTabCoordinator = MainTabCoordinator(
             mealPlanRepository: mealPlanRepository,
-            foodLogRepository: foodLogRepository
+            foodLogRepository: foodLogRepository,
+            streakService: streakService
         )
         self.onboardingRepository = onboardingRepository
         self.onboardingCoordinator.onFinish = { [weak self] in

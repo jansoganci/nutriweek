@@ -53,6 +53,19 @@ struct SupabaseMealPlanRepository: MealPlanRepositoryProtocol {
         return weeklyPlan
     }
 
+    func generateDay(dayName: String, date: String, calorieTarget: Int, macros: MacroGrams) async throws -> DayPlan {
+        let onboardingProfile = try await Task { @MainActor in
+            try await OnboardingService.fetchOnboardingProfile()
+        }.value
+        guard let profile = UserProfile(onboarding: onboardingProfile) else {
+            throw MealPlanGenerationError.profileIncomplete
+        }
+
+        let targets = GemmaPlanTargets(profile: profile, targetCalories: calorieTarget, macros: macros)
+        let dto = try await gemmaService.generateDay(dayName: dayName, date: date, targets: targets)
+        return MealPlanMapper.dayPlan(from: dto)
+    }
+
     private func requireUserId() async throws -> String {
         let session = try await client.auth.session
         return session.user.id.uuidString

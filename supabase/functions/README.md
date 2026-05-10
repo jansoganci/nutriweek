@@ -9,8 +9,7 @@ Functions added for iOS Phase F:
 Required secrets:
 
 - `USDA_API_KEY`
-- `OLLAMA_BASE_URL`
-- `OLLAMA_MODEL` (optional, defaults to `gemma4:e4b`)
+- `GEMINI_API_KEY`
 
 Deploy example:
 

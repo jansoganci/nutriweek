@@ -31,7 +31,8 @@ struct MainTabView: View {
             MealPlanHomeView(
                 mealPlanRepository: coordinator.mealPlanRepository,
                 foodLogRepository: coordinator.foodLogRepository,
-                streakService: coordinator.streakService
+                streakService: coordinator.streakService,
+                onSwitchToLogTab: { coordinator.selectedTab = .quickLog }
             )
                 .tag(MainTabCoordinator.Tab.mealPlan)
                 .tabItem {

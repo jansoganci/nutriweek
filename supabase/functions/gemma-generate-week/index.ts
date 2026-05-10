@@ -1,4 +1,3 @@
-import { coerceJsonObject, isGemmaWeek } from "../_shared/ai.ts";
 import { errorResponse, jsonResponse } from "../_shared/http.ts";
 
 type GenerateWeekPayload = {
@@ -8,7 +7,8 @@ type GenerateWeekPayload = {
   weekStartDate?: string;
 };
 
-const TIMEOUT_MS = 120_000;
+const GEMINI_MODEL = "gemini-3-flash-preview";
+const TIMEOUT_MS = 60_000;
 
 function buildPrompt(input: GenerateWeekPayload): string {
   const weekStart = input.weekStartDate ?? new Date().toISOString().slice(0, 10);
@@ -35,48 +35,58 @@ Deno.serve(async (req) => {
     return errorResponse("BAD_REQUEST", "Invalid JSON body", 400);
   }
 
-  const baseUrl = Deno.env.get("OLLAMA_BASE_URL");
-  const model = Deno.env.get("OLLAMA_MODEL") ?? "gemma4:e4b";
-  if (!baseUrl) {
-    return errorResponse("AI_UNAVAILABLE", "Missing OLLAMA_BASE_URL secret", 500);
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) {
+    return errorResponse("AI_UNAVAILABLE", "Missing GEMINI_API_KEY secret", 500);
   }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const upstream = await fetch(`${baseUrl}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        prompt: buildPrompt(payload),
-        stream: false,
-        options: { num_predict: 4096 },
-      }),
-      signal: controller.signal,
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: buildPrompt(payload) }],
+          }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.7,
+            maxOutputTokens: 4096,
+          },
+        }),
+        signal: controller.signal,
+      },
+    );
 
-    if (upstream.status === 429) {
-      return errorResponse("AI_RATE_LIMITED", "Gemma rate limited request", 429);
+    if (response.status === 429) {
+      return errorResponse("AI_RATE_LIMITED", "Gemini rate limited request", 429);
     }
-    if (!upstream.ok) {
-      return errorResponse("AI_UNAVAILABLE", `Gemma upstream status ${upstream.status}`, 502);
+    if (!response.ok) {
+      return errorResponse("AI_UNAVAILABLE", `Gemini upstream status ${response.status}`, 502);
     }
 
-    const body = (await upstream.json()) as { response?: string };
-    const parsed = coerceJsonObject(body.response ?? "");
-    if (!isGemmaWeek(parsed)) {
-      return errorResponse("AI_SCHEMA_INVALID", "Gemma response does not match week schema", 422);
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      return errorResponse("AI_SCHEMA_INVALID", "Gemini returned empty response", 422);
     }
+
+    const parsed = JSON.parse(text);
     return jsonResponse(parsed);
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      return errorResponse("AI_TIMEOUT", "Gemma request timed out", 504);
+      return errorResponse("AI_TIMEOUT", "Gemini request timed out", 504);
     }
-    return errorResponse("AI_UNAVAILABLE", "Gemma is unreachable", 502);
+    if (error instanceof SyntaxError) {
+      return errorResponse("AI_SCHEMA_INVALID", "Gemini returned non-JSON response", 422);
+    }
+    return errorResponse("AI_UNAVAILABLE", "Gemini is unreachable", 502);
   } finally {
     clearTimeout(timer);
   }
 });
-

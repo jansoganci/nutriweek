@@ -4,6 +4,7 @@ struct MealPlanHomeView: View {
     let mealPlanRepository: MealPlanRepositoryProtocol
     let foodLogRepository: FoodLogRepositoryProtocol
     let streakService: StreakService?
+    var onSwitchToLogTab: () -> Void = {}
 
     @State private var targets: CalculationResults?
     @State private var consumed = FoodMacroResult(calories: 0, protein: 0, carbs: 0, fat: 0)
@@ -17,8 +18,9 @@ struct MealPlanHomeView: View {
     @State private var streak: Int?
     @State private var showFunFact = false
     @State private var funFactText = ""
-    @State private var showLogPlaceholder = false
     @State private var showInfoToast = false
+    @State private var daysReady = 0
+    @State private var partialDays: [DayPlan] = []
 
     private let funFacts = [
         "Raccoons can open locks! 🦝🔓",
@@ -30,11 +32,13 @@ struct MealPlanHomeView: View {
     init(
         mealPlanRepository: MealPlanRepositoryProtocol,
         foodLogRepository: FoodLogRepositoryProtocol,
-        streakService: StreakService? = nil
+        streakService: StreakService? = nil,
+        onSwitchToLogTab: @escaping () -> Void = {}
     ) {
         self.mealPlanRepository = mealPlanRepository
         self.foodLogRepository = foodLogRepository
         self.streakService = streakService
+        self.onSwitchToLogTab = onSwitchToLogTab
     }
 
     var body: some View {
@@ -53,7 +57,7 @@ struct MealPlanHomeView: View {
             .background(ColorToken.background)
 
             Button {
-                showLogPlaceholder = true
+                onSwitchToLogTab()
             } label: {
                 Text("+")
                     .font(TypographyToken.inter(size: 30, weight: .regular))
@@ -84,11 +88,6 @@ struct MealPlanHomeView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(funFactText)
-        }
-        .alert("Quick Log", isPresented: $showLogPlaceholder) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Log screen migration comes next.")
         }
         .sheet(isPresented: $showGeneratePrompt) {
             generatePromptSheet
@@ -186,7 +185,8 @@ struct MealPlanHomeView: View {
     }
 
     private var weeklySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let weekSlots = isoWeekMondayThroughSunday()
+        return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("This Week")
                     .font(TypographyToken.inter(size: 20, weight: .bold))
@@ -203,11 +203,26 @@ struct MealPlanHomeView: View {
             }
 
             if isGenerating {
-                VStack(spacing: 12) {
-                    LoadingSkeletonView(variant: .card)
-                    LoadingSkeletonView(variant: .listRow)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("\(daysReady)/7 days ready")
+                        .font(TypographyToken.inter(size: 13, weight: .semibold))
+                        .foregroundStyle(ColorToken.textSecondary)
+                    ForEach(weekSlots) { slot in
+                        if let day = partialDays.first(where: { $0.date == slot.dateISO }) {
+                            DayPlanCardView(
+                                day: day,
+                                isToday: day.date == todayISO,
+                                isExpanded: expandedDayDate == day.date,
+                                onToggle: {
+                                    expandedDayDate = (expandedDayDate == day.date) ? nil : day.date
+                                }
+                            )
+                        } else {
+                            LoadingSkeletonView(variant: .card)
+                        }
+                    }
                 }
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 12)
             } else if let refreshError {
                 ErrorStateView(
@@ -219,7 +234,7 @@ struct MealPlanHomeView: View {
                 }
             }
 
-            if let weeklyPlan {
+            if let weeklyPlan, !isGenerating {
                 ForEach(weeklyPlan.days, id: \.date) { day in
                     DayPlanCardView(
                         day: day,
@@ -364,15 +379,111 @@ struct MealPlanHomeView: View {
 
     private func handleGenerate() async {
         guard !isGenerating else { return }
+        guard let calorieTarget = targets?.targetCalories, let macros = targets?.macros else {
+            refreshError = "Complete onboarding to generate your plan."
+            return
+        }
+
+        let slots = isoWeekMondayThroughSunday()
+        guard slots.count == 7 else {
+            refreshError = "Could not load this week's schedule."
+            return
+        }
+
         refreshError = nil
+        partialDays = []
+        daysReady = 0
         isGenerating = true
         defer { isGenerating = false }
 
+        let repo = mealPlanRepository
+
+        func mergePartial(_ day: DayPlan) {
+            var merged = partialDays.filter { $0.date != day.date }
+            merged.append(day)
+            merged.sort { $0.date < $1.date }
+            partialDays = merged
+            daysReady = merged.count
+        }
+
         do {
-            let generated = try await mealPlanRepository.generateWeeklyPlan()
-            weeklyPlan = generated
-            try? await mealPlanRepository.saveWeeklyPlan(generated)
+            async let mon = repo.generateDay(
+                dayName: slots[0].weekdayName,
+                date: slots[0].dateISO,
+                calorieTarget: calorieTarget,
+                macros: macros
+            )
+            async let tue = repo.generateDay(
+                dayName: slots[1].weekdayName,
+                date: slots[1].dateISO,
+                calorieTarget: calorieTarget,
+                macros: macros
+            )
+
+            mergePartial(try await mon)
+            mergePartial(try await tue)
+
+            async let wed = repo.generateDay(
+                dayName: slots[2].weekdayName,
+                date: slots[2].dateISO,
+                calorieTarget: calorieTarget,
+                macros: macros
+            )
+            async let thu = repo.generateDay(
+                dayName: slots[3].weekdayName,
+                date: slots[3].dateISO,
+                calorieTarget: calorieTarget,
+                macros: macros
+            )
+            async let fri = repo.generateDay(
+                dayName: slots[4].weekdayName,
+                date: slots[4].dateISO,
+                calorieTarget: calorieTarget,
+                macros: macros
+            )
+            async let sat = repo.generateDay(
+                dayName: slots[5].weekdayName,
+                date: slots[5].dateISO,
+                calorieTarget: calorieTarget,
+                macros: macros
+            )
+            async let sun = repo.generateDay(
+                dayName: slots[6].weekdayName,
+                date: slots[6].dateISO,
+                calorieTarget: calorieTarget,
+                macros: macros
+            )
+
+            mergePartial(try await wed)
+            mergePartial(try await thu)
+            mergePartial(try await fri)
+            mergePartial(try await sat)
+            mergePartial(try await sun)
+
+            let ordered = slots.compactMap { slot in partialDays.first(where: { $0.date == slot.dateISO }) }
+            guard ordered.count == 7 else {
+                refreshError = "Something went wrong while generating your plan."
+                partialDays = []
+                daysReady = 0
+                if weeklyPlan == nil { showEmpty = true }
+                return
+            }
+
+            let weekStart = slots[0].dateISO
+            let plan = WeeklyPlan(
+                id: UUID().uuidString,
+                weekStartDate: weekStart,
+                days: ordered,
+                generatedAt: ISO8601DateFormatter().string(from: Date()),
+                notes: nil
+            )
+            weeklyPlan = plan
+            try? await mealPlanRepository.saveWeeklyPlan(plan)
+
+            partialDays = []
+            daysReady = 0
             showEmpty = false
+
             withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
                 showInfoToast = true
             }
@@ -382,13 +493,44 @@ struct MealPlanHomeView: View {
             }
         } catch {
             refreshError = "Something went wrong while generating your plan."
+            partialDays = []
+            daysReady = 0
             if weeklyPlan == nil {
                 showEmpty = true
             }
         }
     }
 
+    private func isoWeekMondayThroughSunday(reference: Date = Date()) -> [IsoWeekDaySlot] {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = .current
+        let weekdayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        guard let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: reference))
+        else { return [] }
+
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        return weekdayNames.indices.compactMap { index in
+            guard let date = calendar.date(byAdding: .day, value: index, to: weekStart) else { return nil }
+            return IsoWeekDaySlot(
+                weekdayName: weekdayNames[index],
+                dateISO: formatter.string(from: date)
+            )
+        }
+    }
+
 }
+
+private struct IsoWeekDaySlot: Identifiable {
+    let weekdayName: String
+    let dateISO: String
+
+    var id: String { dateISO }
+}
+
 
 private struct DayPlanCardView: View {
     let day: DayPlan

@@ -1,8 +1,15 @@
 import Foundation
 
+/// Shared inputs for Gemma edge prompts (matches `gemma-generate-week` / `gemma-generate-day` bodies).
+struct GemmaPlanTargets: Encodable, Sendable {
+    let profile: UserProfile
+    let targetCalories: Int
+    let macros: MacroGrams
+}
+
 struct GemmaEdgeService {
     private let edgeClient: EdgeFunctionClient
-    private let functionName = "gemma-generate-week"
+    private let weekFunctionName = "gemma-generate-week"
 
     init(edgeClient: EdgeFunctionClient = EdgeFunctionClient()) {
         self.edgeClient = edgeClient
@@ -10,11 +17,30 @@ struct GemmaEdgeService {
 
     func generateWeeklyPlan() async throws -> GemmaWeeklyPlanDTO {
         let payload = GemmaGenerateWeekRequest()
-        return try await edgeClient.invoke(functionName, payload: payload)
+        return try await edgeClient.invoke(weekFunctionName, payload: payload)
+    }
+
+    func generateDay(dayName: String, date: String, targets: GemmaPlanTargets) async throws -> GemmaDayDTO {
+        let payload = GemmaGenerateDayRequest(
+            profile: targets.profile,
+            targetCalories: targets.targetCalories,
+            macros: targets.macros,
+            dayName: dayName,
+            date: date
+        )
+        return try await edgeClient.invoke("gemma-generate-day", payload: payload)
     }
 }
 
 struct GemmaGenerateWeekRequest: Encodable {}
+
+private struct GemmaGenerateDayRequest: Encodable {
+    let profile: UserProfile
+    let targetCalories: Int
+    let macros: MacroGrams
+    let dayName: String
+    let date: String
+}
 
 struct GemmaWeeklyPlanDTO: Codable, Sendable {
     let weekOf: String

@@ -19,25 +19,12 @@ enum MealPlanMapper {
         WeeklyPlan(
             id: rowId,
             weekStartDate: dto.weekOf,
-            days: dto.days.map(toDomain),
+            days: dto.days.map(dayPlan(from:)),
             generatedAt: generatedAt
         )
     }
 
-    static func toDomain(_ row: WeeklyPlanRow) -> WeeklyPlan {
-        toDomain(dto: row.plan_json, rowId: row.id, generatedAt: row.generated_at)
-    }
-
-    static func toUpsert(_ plan: WeeklyPlan, userId: String) -> WeeklyPlanUpsert {
-        WeeklyPlanUpsert(
-            user_id: userId,
-            week_start_date: plan.weekStartDate,
-            plan_json: toGemmaDTO(plan),
-            generated_at: plan.generatedAt
-        )
-    }
-
-    private static func toDomain(_ day: GemmaDayDTO) -> DayPlan {
+    static func dayPlan(from day: GemmaDayDTO) -> DayPlan {
         let meals = day.meals.enumerated().map { idx, meal in
             MealEntry(
                 id: "\(day.date)-\(idx)",
@@ -57,6 +44,19 @@ enum MealPlanMapper {
             meals: meals,
             targetMacros: DailyMacros(calories: day.totalCalories, protein: 0, carbs: 0, fat: 0),
             loggedMacros: DailyMacros(calories: 0, protein: 0, carbs: 0, fat: 0)
+        )
+    }
+
+    static func toDomain(_ row: WeeklyPlanRow) -> WeeklyPlan {
+        toDomain(dto: row.plan_json, rowId: row.id, generatedAt: row.generated_at)
+    }
+
+    static func toUpsert(_ plan: WeeklyPlan, userId: String) -> WeeklyPlanUpsert {
+        WeeklyPlanUpsert(
+            user_id: userId,
+            week_start_date: plan.weekStartDate,
+            plan_json: toGemmaDTO(plan),
+            generated_at: plan.generatedAt
         )
     }
 
