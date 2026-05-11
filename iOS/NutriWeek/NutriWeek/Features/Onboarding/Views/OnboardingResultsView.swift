@@ -11,10 +11,10 @@ struct OnboardingResultsView: View {
 
     private var rockyMessage: String {
         switch results.bmiCategory.label {
-        case "Healthy": return "Looking good! Now let's eat right 🦝✨"
-        case "Underweight": return "We'll get you fueled up properly! 🦝💪"
-        case "Overweight": return "No worries, Rocky's got your back! 🦝❤️"
-        default: return "Every journey starts with one step. Let's go! 🦝🌟"
+        case "Healthy": return "Looking good! Now let's eat right ✨"
+        case "Underweight": return "We'll get you fueled up properly! 💪"
+        case "Overweight": return "No worries, Rocky's got your back! ❤️"
+        default: return "Every journey starts with one step. Let's go! 🌟"
         }
     }
 
@@ -40,7 +40,24 @@ struct OnboardingResultsView: View {
                 ScrollView {
                     VStack(spacing: 14) {
                         VStack(spacing: SpacingToken.xs) {
-                            RockyMascotView(mood: .celebrating, size: 88, message: rockyMessage)
+                            RockyVideoView(.celebrate, loop: false)
+                                .frame(width: 88, height: 88)
+                                .clipShape(RoundedRectangle(cornerRadius: 88 * 0.12, style: .continuous))
+
+                            Text(rockyMessage)
+                                .font(TypographyToken.inter(size: 14, weight: .regular))
+                                .foregroundStyle(ColorToken.textPrimary)
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(TypographyToken.LineHeight.tight - 14)
+                                .padding(.horizontal, SpacingToken.md)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: 240)
+                                .background(ColorToken.card)
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .stroke(ColorToken.border, lineWidth: BorderToken.hairline)
+                                )
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.bottom, 4)
@@ -70,7 +87,7 @@ struct OnboardingResultsView: View {
                                     ProgressView()
                                         .tint(.white)
                                 } else {
-                                    Text("Let's Start! 🦝")
+                                    Text("Let's Start!")
                                         .font(TypographyToken.inter(size: 18, weight: .bold))
                                         .foregroundStyle(Color.white)
                                 }

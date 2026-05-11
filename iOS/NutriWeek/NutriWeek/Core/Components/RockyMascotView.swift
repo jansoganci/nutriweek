@@ -21,8 +21,11 @@ struct RockyMascotView: View {
 
     var body: some View {
         VStack(spacing: SpacingToken.xs) {
-            Text(primaryEmoji)
-                .font(.system(size: size))
+            Image(mood.staticImageName)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: size * 0.12, style: .continuous))
                 .overlay(alignment: .bottomTrailing) {
                     if let accentEmoji {
                         Text(accentEmoji)
@@ -51,20 +54,30 @@ struct RockyMascotView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var primaryEmoji: String {
-        "🦝"
-    }
-
     private var accentEmoji: String? {
         switch mood {
         case .happy:
             return nil
         case .thinking:
-            return "💭"
+            return nil
         case .celebrating:
             return "✨"
         case .encouraging:
             return "💪"
+        }
+    }
+
+}
+
+private extension RockyMascotView.Mood {
+    var staticImageName: String {
+        switch self {
+        case .happy, .encouraging:
+            return "rocky-wave-static"
+        case .thinking:
+            return "rocky-think-static"
+        case .celebrating:
+            return "rocky-celebrate-static"
         }
     }
 }

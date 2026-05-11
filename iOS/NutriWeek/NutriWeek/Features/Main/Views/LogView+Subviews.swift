@@ -5,7 +5,7 @@ extension LogView {
         HStack {
             Color.clear.frame(width: 32, height: 32)
             Spacer(minLength: 0)
-            Text("Quick Log 🦝")
+            Text("Quick Log")
                 .font(TypographyToken.inter(size: 20, weight: .bold))
                 .foregroundStyle(ColorToken.textPrimary)
             Spacer(minLength: 0)
@@ -133,7 +133,7 @@ extension LogView {
 
     var emptyState: some View {
         VStack(spacing: 12) {
-            RockyMascotView(mood: .encouraging, size: RockyMascotView.Size.large.rawValue)
+            RockyMascotView(mood: .happy, size: RockyMascotView.Size.large.rawValue)
             Text("Search for any food above!")
                 .font(TypographyToken.inter(size: 16, weight: .semibold))
                 .foregroundStyle(ColorToken.textPrimary)
@@ -164,7 +164,7 @@ extension LogView {
     var noResultState: some View {
         VStack(spacing: 8) {
             RockyMascotView(mood: .thinking, size: RockyMascotView.Size.large.rawValue)
-            Text("Hmm, couldn't find that one 🦝")
+            Text("Hmm, couldn't find that one")
                 .font(TypographyToken.inter(size: 16, weight: .semibold))
                 .foregroundStyle(ColorToken.textPrimary)
                 .multilineTextAlignment(.center)

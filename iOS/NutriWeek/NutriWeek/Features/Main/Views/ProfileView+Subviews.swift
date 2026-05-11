@@ -29,7 +29,7 @@ extension ProfileView {
             ScrollView {
                 VStack(spacing: 16) {
                     Text("My Profile").font(TypographyToken.inter(size: 20, weight: .bold)).foregroundStyle(ColorToken.textPrimary).frame(maxWidth: .infinity, alignment: .leading)
-                    rockyHeader(for: profile.goal)
+                    profileAvatarHeader(for: profile.goal, initials: profileInitials)
                     statsRow(profile: profile, results: results)
                     dailyTargetsCard(results: results)
                     personalInfoCard(profile: profile)
@@ -52,24 +52,17 @@ extension ProfileView {
         }
     }
 
-    func rockyHeader(for goal: Goal) -> some View {
+    func profileAvatarHeader(for goal: Goal, initials: String) -> some View {
         VStack(spacing: 8) {
-            RockyMascotView(
-                mood: mascotMood(for: goal),
-                size: RockyMascotView.Size.large.rawValue
-            )
+            Text(initials)
+                .font(TypographyToken.inter(size: 32, weight: .bold))
+                .foregroundStyle(ColorToken.onPrimary)
+                .frame(width: RockyMascotView.Size.large.rawValue, height: RockyMascotView.Size.large.rawValue)
+                .background(ColorToken.primary)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(ColorToken.border, lineWidth: 1))
+                .shadow(color: ColorToken.shadow.opacity(0.08), radius: 6, x: 0, y: 2)
             Text(rockyMessage(for: goal)).font(TypographyToken.inter(size: 14, weight: .medium)).foregroundStyle(ColorToken.onSecondary).multilineTextAlignment(.center).lineSpacing(2).padding(.horizontal, 16).padding(.vertical, 10).background(ColorToken.secondary).clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        }
-    }
-
-    private func mascotMood(for goal: Goal) -> RockyMascotView.Mood {
-        switch goal {
-        case .cut:
-            return .encouraging
-        case .bulk:
-            return .celebrating
-        case .maintain:
-            return .happy
         }
     }
 
@@ -133,13 +126,11 @@ extension ProfileView {
                 infoInput("Age", text: $infoDraft.age, placeholder: "e.g. 28", keyboard: .numberPad, error: ageError)
                 infoInput("Gender", text: $infoDraft.gender, placeholder: "male / female / other", keyboard: .default, error: nil)
                 infoInput("Height (cm)", text: $infoDraft.height, placeholder: "e.g. 175", keyboard: .decimalPad, error: heightError)
-                infoInput("Weight (kg)", text: $infoDraft.weight, placeholder: "e.g. 70", keyboard: .decimalPad, error: weightError)
                 infoInput("Activity Level", text: $infoDraft.activityLevel, placeholder: "sedentary / lightly_active / moderately_active / very_active / extra_active", keyboard: .default, error: nil)
             } else {
                 infoRow("Age", "\(Int(profile.age)) yrs")
                 infoRow("Gender", profile.gender.rawValue.capitalized)
                 infoRow("Height", "\(Int(profile.height)) cm")
-                infoRow("Weight", "\(oneDecimal(profile.weight)) kg")
                 infoRow("Activity Level", activityLabel(profile.activityLevel))
                 HStack(alignment: .top, spacing: 8) {
                     Text("Dietary Prefs").font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.mutedForeground).frame(width: 110, alignment: .leading)
@@ -157,25 +148,11 @@ extension ProfileView {
             HStack {
                 Text("Body Measurements").font(TypographyToken.inter(size: 16, weight: .bold)).foregroundStyle(ColorToken.textPrimary)
                 Spacer(minLength: 0)
-                if editingMeasurements {
-                    HStack(spacing: 8) {
-                        Button("Cancel") { measurementDraft = measurementFields; editingMeasurements = false }
-                            .font(TypographyToken.inter(size: 13, weight: .semibold)).foregroundStyle(ColorToken.textSecondary).padding(.horizontal, 12).padding(.vertical, 5).background(ColorToken.muted).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
-                        Button("Save") { Task { await handleSaveMeasurements() } }
-                            .font(TypographyToken.inter(size: 13, weight: .semibold)).foregroundStyle(ColorToken.onPrimary).padding(.horizontal, 14).padding(.vertical, 5).background(ColorToken.primary).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
-                    }
-                } else {
-                    Button("Edit") { measurementDraft = measurementFields; editingMeasurements = true }
-                        .font(TypographyToken.inter(size: 13, weight: .semibold)).foregroundStyle(ColorToken.primary).padding(.horizontal, 14).padding(.vertical, 5).background(ColorToken.secondary).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
-                }
+                Button("+ Log New") { showMeasurementLogSheet = true }
+                    .font(TypographyToken.inter(size: 13, weight: .semibold)).foregroundStyle(ColorToken.primary).padding(.horizontal, 14).padding(.vertical, 5).background(ColorToken.secondary).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
             }
-            if editingMeasurements {
-                infoInput("Waist (cm)", text: $measurementDraft.waist, placeholder: "e.g. 82", keyboard: .decimalPad, error: nil)
-                infoInput("Hips (cm)", text: $measurementDraft.hips, placeholder: "e.g. 96", keyboard: .decimalPad, error: nil)
-                infoInput("Chest (cm)", text: $measurementDraft.chest, placeholder: "e.g. 100", keyboard: .decimalPad, error: nil)
-                infoInput("Left Arm (cm)", text: $measurementDraft.arms, placeholder: "e.g. 33", keyboard: .decimalPad, error: nil)
-                infoInput("Left Leg (cm)", text: $measurementDraft.thighs, placeholder: "e.g. 55", keyboard: .decimalPad, error: nil)
-            } else if hasMeasurements {
+            infoRow("Weight", "\(oneDecimal(profile.weight)) kg")
+            if hasMeasurements {
                 if let v = profile.measurements?.waist { infoRow("Waist", "\(oneDecimal(v)) cm") }
                 if let v = profile.measurements?.hips { infoRow("Hips", "\(oneDecimal(v)) cm") }
                 if let v = profile.measurements?.chest { infoRow("Chest", "\(oneDecimal(v)) cm") }
@@ -190,11 +167,17 @@ extension ProfileView {
     var settingsCard: some View {
         card {
             Text("Settings").font(TypographyToken.inter(size: 16, weight: .bold)).foregroundStyle(ColorToken.textPrimary).frame(maxWidth: .infinity, alignment: .leading)
-            Button("Reset Weekly Plan 🔄") { UserDefaults.standard.removeObject(forKey: "weeklyPlan"); showToastMessage("Weekly plan reset! 🦝✅") }
+            Button("Reset Weekly Plan") { UserDefaults.standard.removeObject(forKey: "weeklyPlan"); showToastMessage("Weekly plan reset! ✅") }
                 .font(TypographyToken.inter(size: 14, weight: .semibold)).foregroundStyle(ColorToken.textPrimary).frame(maxWidth: .infinity).padding(.vertical, 12).background(ColorToken.muted).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
+                .disabled(isDeleting)
             divider
             Button("Reset All Data 🗑️") { showResetAllConfirm = true }
                 .font(TypographyToken.inter(size: 14, weight: .semibold)).foregroundStyle(ColorToken.destructive).frame(maxWidth: .infinity).padding(.vertical, 12).background(ColorToken.destructiveSurface).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
+                .disabled(isDeleting)
+            divider
+            Button("Delete Account") { showDeleteAccountConfirm = true }
+                .font(TypographyToken.inter(size: 14, weight: .semibold)).foregroundStyle(ColorToken.destructive).frame(maxWidth: .infinity).padding(.vertical, 12).background(ColorToken.destructiveSurface).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
+                .disabled(isDeleting)
         }
     }
 

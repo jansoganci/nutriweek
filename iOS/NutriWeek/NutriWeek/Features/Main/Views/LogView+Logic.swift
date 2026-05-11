@@ -30,7 +30,7 @@ extension LogView {
                     Text("🥩 \(oneDecimal(preview.protein))g protein")
                     Text("🍚 \(oneDecimal(preview.carbs))g carbs")
                     Text("🥑 \(oneDecimal(preview.fat))g fat")
-                    Text("Looks delicious! 🦝😋").font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textSecondary).italic().padding(.top, 2)
+                    Text("Looks delicious! 😋").font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textSecondary).italic().padding(.top, 2)
                 }
                 .font(TypographyToken.inter(size: 15, weight: .regular))
                 .foregroundStyle(ColorToken.textPrimary)
@@ -39,7 +39,7 @@ extension LogView {
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(ColorToken.primary.opacity(0.2), lineWidth: 1))
             }
-            Button("Add to Today 🦝") { handleAddTapped(preview: preview) }
+            Button("Add to Today") { handleAddTapped(preview: preview) }
                 .font(TypographyToken.inter(size: 17, weight: .bold)).foregroundStyle(Color.white)
                 .frame(maxWidth: .infinity).padding(.vertical, 16)
                 .background(ColorToken.primary).clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous)).buttonStyle(.plain)
@@ -71,7 +71,7 @@ extension LogView {
                 VStack(spacing: 10) {
                     RockyMascotView(mood: .thinking, size: RockyMascotView.Size.large.rawValue)
                     Text("Nothing logged yet today!").font(TypographyToken.inter(size: 16, weight: .semibold)).foregroundStyle(ColorToken.textPrimary)
-                    Text("Tap the search bar to add food 🦝").font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textSecondary)
+                    Text("Tap the search bar to add food").font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textSecondary)
                 }
                 .frame(maxWidth: .infinity).padding(.vertical, 40)
             } else {
@@ -145,7 +145,7 @@ extension LogView {
     func handleAddTapped(preview: FoodMacroResult?) {
         guard let preview, let selectedFood else { return }
         let grams = Double(gramsText) ?? 0
-        guard grams > 0 else { gramsError = "Please enter a valid amount 🦝"; Haptics.warning(); return }
+        guard grams > 0 else { gramsError = "Please enter a valid amount"; Haptics.warning(); return }
         if grams > 5000 { pendingMacros = preview; showLargeAmountConfirm = true; return }
         Task { await addLog(food: selectedFood, grams: grams, macros: preview) }
     }
@@ -175,7 +175,7 @@ extension LogView {
                 }
             }
         } catch {
-            await MainActor.run { gramsError = "Something went wrong. Try again 🦝" }
+            await MainActor.run { gramsError = "Something went wrong. Try again" }
         }
     }
 

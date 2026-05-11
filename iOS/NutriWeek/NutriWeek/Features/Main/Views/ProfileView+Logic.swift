@@ -25,6 +25,9 @@ extension ProfileView {
                 let left_arm_cm: Double?
                 let left_leg_cm: Double?
             }
+            struct LatestWeightRow: Decodable {
+                let weight_kg: Double
+            }
 
             let profileRows: [ProfileRow] = try await client.from("profiles")
                 .select("gender, age, height_cm, weight_kg, activity_level, goal, dietary_preferences, onboarding_complete")
@@ -35,6 +38,17 @@ extension ProfileView {
             guard let row = profileRows.first else {
                 throw NSError(domain: "ProfileView", code: 1, userInfo: [NSLocalizedDescriptionKey: "Profile not found. Please complete onboarding again."])
             }
+
+            let latestWeightRows: [LatestWeightRow] = (try? await client.from("body_measurements")
+                .select("weight_kg")
+                .eq("user_id", value: userId)
+                .not("weight_kg", operator: .is, value: "null")
+                .order("measured_at", ascending: false)
+                .limit(1)
+                .execute()
+                .value) ?? []
+
+            let weightForDisplay = latestWeightRows.first?.weight_kg ?? row.weight_kg ?? 0
 
             let measurementRows: [MeasurementRow] = (try? await client.from("body_measurements")
                 .select("waist_cm, hips_cm, chest_cm, left_arm_cm, left_leg_cm")
@@ -52,7 +66,7 @@ extension ProfileView {
                 gender: Gender(rawValue: row.gender ?? "other") ?? .other,
                 age: row.age ?? 0,
                 height: row.height_cm ?? 0,
-                weight: row.weight_kg ?? 0,
+                weight: weightForDisplay,
                 activityLevel: ActivityLevel(rawValue: row.activity_level ?? "sedentary") ?? .sedentary,
                 goal: Goal(rawValue: row.goal ?? "maintain") ?? .maintain,
                 measurements: measurements,
@@ -62,6 +76,7 @@ extension ProfileView {
                 updatedAt: Date().ISO8601Format()
             )
 
+            profileInitials = Self.displayInitials(fromEmail: session.user.email)
             profile = p
             results = NutritionCalculationService.calculateAll(profile: p)
             hydrateEditableFields(p)
@@ -71,30 +86,18 @@ extension ProfileView {
     }
 
     func hydrateEditableFields(_ p: UserProfile) {
-        let info = EditablePersonalInfo(age: "\(p.age)", gender: p.gender.rawValue, height: oneDecimal(p.height), weight: oneDecimal(p.weight), activityLevel: p.activityLevel.rawValue)
+        let info = EditablePersonalInfo(age: "\(p.age)", gender: p.gender.rawValue, height: oneDecimal(p.height), activityLevel: p.activityLevel.rawValue)
         infoFields = info
         infoDraft = info
-        let m = p.measurements
-        let measurement = EditableMeasurements(
-            waist: m?.waist.map(oneDecimal) ?? "",
-            hips: m?.hips.map(oneDecimal) ?? "",
-            chest: m?.chest.map(oneDecimal) ?? "",
-            arms: m?.arms.map(oneDecimal) ?? "",
-            thighs: m?.thighs.map(oneDecimal) ?? ""
-        )
-        measurementFields = measurement
-        measurementDraft = measurement
     }
 
     func handleSaveInfo() async {
         guard var profile else { return }
         let ageNum = Int(infoDraft.age) ?? -1
         let heightNum = Double(infoDraft.height) ?? -1
-        let weightNum = Double(infoDraft.weight) ?? -1
         var valid = true
         if ageNum < 10 || ageNum > 120 { ageError = "Age must be between 10 and 120"; valid = false } else { ageError = nil }
         if heightNum < 50 || heightNum > 300 { heightError = "Height must be between 50 and 300 cm"; valid = false } else { heightError = nil }
-        if weightNum < 20 || weightNum > 500 { weightError = "Weight must be between 20 and 500 kg"; valid = false } else { weightError = nil }
         guard valid else { return }
         guard let gender = Gender(rawValue: infoDraft.gender.lowercased()), let activity = ActivityLevel(rawValue: infoDraft.activityLevel.lowercased()) else {
             validationAlertMessage = "Gender and activity level are required."
@@ -105,7 +108,6 @@ extension ProfileView {
         profile.age = ageNum
         profile.gender = gender
         profile.height = heightNum
-        profile.weight = weightNum
         profile.activityLevel = activity
         profile.updatedAt = Date().ISO8601Format()
 
@@ -129,41 +131,7 @@ extension ProfileView {
             results = calc
             infoFields = infoDraft
             editingInfo = false
-            showToastMessage("Profile updated! 🦝✅")
-        } catch {
-            validationAlertMessage = "Save failed: \(error.localizedDescription)"
-            showValidationAlert = true
-        }
-    }
-
-    func handleSaveMeasurements() async {
-        guard var profile else { return }
-        let measurements = BodyMeasurements(
-            chest: measurementDraft.chest.isEmpty ? nil : Double(measurementDraft.chest),
-            waist: measurementDraft.waist.isEmpty ? nil : Double(measurementDraft.waist),
-            hips: measurementDraft.hips.isEmpty ? nil : Double(measurementDraft.hips),
-            thighs: measurementDraft.thighs.isEmpty ? nil : Double(measurementDraft.thighs),
-            arms: measurementDraft.arms.isEmpty ? nil : Double(measurementDraft.arms)
-        )
-        do {
-            let userId = try await client.auth.session.user.id.uuidString
-            struct MeasurementInsert: Encodable {
-                let user_id: String
-                let waist_cm: Double?
-                let hips_cm: Double?
-                let chest_cm: Double?
-                let left_arm_cm: Double?
-                let left_leg_cm: Double?
-            }
-            try await client.from("body_measurements")
-                .insert(MeasurementInsert(user_id: userId, waist_cm: measurements.waist, hips_cm: measurements.hips, chest_cm: measurements.chest, left_arm_cm: measurements.arms, left_leg_cm: measurements.thighs))
-                .execute()
-            profile.measurements = measurements
-            profile.updatedAt = Date().ISO8601Format()
-            self.profile = profile
-            measurementFields = measurementDraft
-            editingMeasurements = false
-            showToastMessage("Measurements saved! 🦝✅")
+            showToastMessage("Profile updated! ✅")
         } catch {
             validationAlertMessage = "Save failed: \(error.localizedDescription)"
             showValidationAlert = true
@@ -185,13 +153,31 @@ extension ProfileView {
         }
     }
 
+    func handleDeleteAccount() async {
+        isDeleting = true
+        defer { isDeleting = false }
+        do {
+            struct DeleteAccountResponse: Decodable { let success: Bool }
+            let response: DeleteAccountResponse = try await EdgeFunctionClient(client: client).invoke("delete-account")
+            guard response.success else {
+                validationAlertMessage = "Could not delete your account. Please try again."
+                showValidationAlert = true
+                return
+            }
+            try await client.auth.signOut()
+        } catch {
+            validationAlertMessage = "Delete account failed: \(error.localizedDescription)"
+            showValidationAlert = true
+        }
+    }
+
     func showToastMessage(_ message: String) {
         toastMessage = message
         withAnimation(.easeInOut(duration: 0.2)) { showToast = true }
         Task { try? await Task.sleep(nanoseconds: 2_000_000_000); withAnimation(.easeInOut(duration: 0.3)) { showToast = false } }
     }
 
-    func clearFieldErrors() { ageError = nil; heightError = nil; weightError = nil }
+    func clearFieldErrors() { ageError = nil; heightError = nil }
 
     func goalLabel(_ goal: Goal) -> String {
         switch goal { case .cut: return "Lose Fat 🔥"; case .bulk: return "Build Muscle 💪"; case .maintain: return "Stay Balanced ⚖️" }
@@ -206,7 +192,7 @@ extension ProfileView {
         }
     }
     func rockyMessage(for goal: Goal) -> String {
-        switch goal { case .cut: return "Stay in that deficit! You've got this 🦝🔥"; case .bulk: return "Eat big, lift big! Let's grow 🦝💪"; case .maintain: return "Balance is the key 🦝⚖️" }
+        switch goal { case .cut: return "Stay in that deficit! You've got this 🔥"; case .bulk: return "Eat big, lift big! Let's grow 💪"; case .maintain: return "Balance is the key ⚖️" }
     }
     func dietaryLabel(_ pref: DietaryPreference) -> String {
         switch pref {
@@ -224,5 +210,25 @@ extension ProfileView {
     }
     func oneDecimal(_ value: Double) -> String {
         value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value))" : String(format: "%.1f", value)
+    }
+
+    /// Up to two letters from the account email local-part (e.g. `jane.doe@…` → `JD`).
+    static func displayInitials(fromEmail email: String?) -> String {
+        guard let email = email?.trimmingCharacters(in: .whitespacesAndNewlines), !email.isEmpty else {
+            return "?"
+        }
+        let local = email.split(separator: "@", maxSplits: 1, omittingEmptySubsequences: true).first.map(String.init) ?? email
+        let segments = local.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init).filter { !$0.isEmpty }
+        if segments.count >= 2, let f = segments.first?.first, let l = segments.last?.first {
+            return String([f, l]).uppercased()
+        }
+        let alphanumeric = local.filter { $0.isLetter || $0.isNumber }
+        if alphanumeric.count >= 2 {
+            return String(alphanumeric.prefix(2)).uppercased()
+        }
+        if let c = alphanumeric.first {
+            return String(c).uppercased()
+        }
+        return "?"
     }
 }

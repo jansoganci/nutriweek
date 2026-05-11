@@ -20,13 +20,13 @@ struct OnboardingStep4View: View {
 
     private var rockyMessage: String {
         let keys = Array(selected)
-        if keys.isEmpty { return "Any food rules I should know about? 🦝🍽️" }
-        if keys.contains("everything") { return "My kind of human! 🦝🍕🍗🥗" }
-        if keys.contains("vegan") { return "A fellow plant lover! 🦝🌱" }
-        if keys.contains("gluten_free") { return "Got it, no bread crimes! 🦝🌾" }
-        if keys.contains("halal") { return "Noted! Clean eating all the way 🦝✅" }
-        if keys.count > 1 { return "Complex taste! I respect it 🦝" }
-        return "Any food rules I should know about? 🦝🍽️"
+        if keys.isEmpty { return "Any food rules I should know about? 🍽️" }
+        if keys.contains("everything") { return "My kind of human! 🍕🍗🥗" }
+        if keys.contains("vegan") { return "A fellow plant lover! 🌱" }
+        if keys.contains("gluten_free") { return "Got it, no bread crimes! 🌾" }
+        if keys.contains("halal") { return "Noted! Clean eating all the way ✅" }
+        if keys.count > 1 { return "Complex taste! I respect it" }
+        return "Any food rules I should know about? 🍽️"
     }
 
     var body: some View {

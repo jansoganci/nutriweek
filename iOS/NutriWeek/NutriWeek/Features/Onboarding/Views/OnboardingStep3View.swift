@@ -14,8 +14,8 @@ struct OnboardingStep3View: View {
 
     private var rockyMessage: String {
         hasTyped
-            ? "Look at you, being all precise! 🦝📏"
-            : "Don't worry, these are just for YOU. No judging here! 🦝"
+            ? "Look at you, being all precise! 📏"
+            : "Don't worry, these are just for YOU. No judging here!"
     }
 
     var body: some View {

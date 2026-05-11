@@ -69,7 +69,7 @@ struct LogView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .alert("That's a lot... 🦝😅", isPresented: $showLargeAmountConfirm) {
+        .alert("That's a lot... 😅", isPresented: $showLargeAmountConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Yes, log it") { performAddFromPendingLargeAmount() }
         } message: {

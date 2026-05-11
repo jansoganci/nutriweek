@@ -19,12 +19,12 @@ struct OnboardingStep1View: View {
 
     private var rockyMessage: String {
         guard let activityLevel else {
-            return "Hey! I'm Rocky 🦝 Let's build your perfect meal plan!"
+            return "Hey! I'm Rocky — let's build your perfect meal plan!"
         }
         switch activityLevel {
-        case .sedentary: return "No worries, we all start somewhere! 🦝"
-        case .lightlyActive, .moderatelyActive, .veryActive: return "Nice! I like your style 🦝"
-        case .extraActive: return "Wow, you're a machine! 🦝💪"
+        case .sedentary: return "No worries, we all start somewhere!"
+        case .lightlyActive, .moderatelyActive, .veryActive: return "Nice! I like your style"
+        case .extraActive: return "Wow, you're a machine! 💪"
         }
     }
 
@@ -42,7 +42,26 @@ struct OnboardingStep1View: View {
                 StepProgressView(currentStep: 1, totalSteps: 4)
 
                 VStack(spacing: 0) {
-                    RockyMascotView(mood: .happy, size: 64, message: rockyMessage)
+                    VStack(spacing: SpacingToken.xs) {
+                        RockyVideoView(.wave)
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 64 * 0.12, style: .continuous))
+
+                        Text(rockyMessage)
+                            .font(TypographyToken.inter(size: 14, weight: .regular))
+                            .foregroundStyle(ColorToken.textPrimary)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(TypographyToken.LineHeight.tight - 14)
+                            .padding(.horizontal, SpacingToken.md)
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: 240)
+                            .background(ColorToken.card)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(ColorToken.border, lineWidth: BorderToken.hairline)
+                            )
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, OnboardingMetrics.mascotTop)

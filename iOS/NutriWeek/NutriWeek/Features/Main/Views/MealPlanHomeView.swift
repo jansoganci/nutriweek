@@ -23,8 +23,8 @@ struct MealPlanHomeView: View {
     @State private var partialDays: [DayPlan] = []
 
     private let funFacts = [
-        "Raccoons can open locks! 🦝🔓",
-        "A raccoon's hands have 5 fingers — just like yours 🦝🖐️",
+        "Raccoons can open locks! 🔓",
+        "A raccoon's hands have 5 fingers — just like yours 🖐️",
         "Protein keeps you full for longer than carbs or fat! 💪",
         "Eating slowly helps you eat 10-15% fewer calories! 🍽️",
     ]
@@ -84,7 +84,7 @@ struct MealPlanHomeView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .task { await initialize() }
-        .alert("Rocky says... 🦝", isPresented: $showFunFact) {
+        .alert("Rocky says...", isPresented: $showFunFact) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(funFactText)
@@ -108,7 +108,7 @@ struct MealPlanHomeView: View {
             }
             Spacer(minLength: 0)
             Button {
-                funFactText = funFacts.randomElement() ?? "Rocky says hi! 🦝"
+                funFactText = funFacts.randomElement() ?? "Rocky says hi!"
                 showFunFact = true
             } label: {
                 RockyMascotView(mood: .happy, size: RockyMascotView.Size.small.rawValue)
@@ -150,7 +150,7 @@ struct MealPlanHomeView: View {
         let remainingText: String = {
             if targetCals == 0 { return "Complete onboarding to see targets" }
             if remaining >= 0 { return "\(remaining) kcal remaining" }
-            return "\(abs(remaining)) kcal over target 🦝😅"
+            return "\(abs(remaining)) kcal over target 😅"
         }()
 
         return VStack(alignment: .leading, spacing: 16) {
@@ -247,7 +247,7 @@ struct MealPlanHomeView: View {
                 }
             } else if loaded, showEmpty {
                 VStack(spacing: 10) {
-                    RockyMascotView(mood: .encouraging, size: RockyMascotView.Size.large.rawValue)
+                    RockyMascotView(mood: .thinking, size: RockyMascotView.Size.large.rawValue)
                     Text("No plan yet!")
                         .font(TypographyToken.inter(size: 20, weight: .bold))
                         .foregroundStyle(ColorToken.textPrimary)
@@ -258,7 +258,7 @@ struct MealPlanHomeView: View {
                     Button {
                         showGeneratePrompt = true
                     } label: {
-                        Text("Generate My Plan 🦝")
+                        Text("Generate My Plan")
                             .font(TypographyToken.inter(size: 16, weight: .bold))
                             .foregroundStyle(Color.white)
                             .padding(.vertical, 14)
@@ -305,7 +305,7 @@ struct MealPlanHomeView: View {
                 showGeneratePrompt = false
                 Task { await handleGenerate() }
             } label: {
-                Text("Let's go! 🦝")
+                Text("Let's go!")
                     .font(TypographyToken.inter(size: 17, weight: .bold))
                     .foregroundStyle(Color.white)
                     .frame(maxWidth: .infinity)
@@ -334,7 +334,7 @@ struct MealPlanHomeView: View {
         if h >= 5, h < 11 { return "Good morning!" }
         if h >= 11, h < 17 { return "Good afternoon!" }
         if h >= 17, h < 22 { return "Good evening!" }
-        return "Still up? 🦝"
+        return "Still up?"
     }
 
     private var todayISO: String {

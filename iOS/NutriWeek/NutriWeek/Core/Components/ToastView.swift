@@ -13,8 +13,7 @@ struct ToastView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(icon)
-                .font(.system(size: 20))
+            iconLeading
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(TypographyToken.inter(size: 14, weight: .bold))
@@ -34,11 +33,26 @@ struct ToastView: View {
         .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
     }
 
+    @ViewBuilder
+    private var iconLeading: some View {
+        switch style {
+        case .success, .error:
+            Text(icon)
+                .font(.system(size: 20))
+        case .info:
+            Image("rocky-celebrate-static")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 24, height: 24)
+                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        }
+    }
+
     private var icon: String {
         switch style {
         case .success: return "✅"
         case .error: return "⚠️"
-        case .info: return "🦝"
+        case .info: return ""
         }
     }
 

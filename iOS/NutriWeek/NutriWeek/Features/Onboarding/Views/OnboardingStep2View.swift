@@ -15,12 +15,12 @@ struct OnboardingStep2View: View {
 
     private var rockyMessage: String {
         guard let goal else {
-            return "What's the mission? 🦝 Choose your goal!"
+            return "What's the mission? Choose your goal!"
         }
         switch goal {
-        case .cut: return "Let's get shredded! I'll keep the snacks away 🦝🔥"
-        case .bulk: return "Eating more? My favorite goal! 🦝🍗"
-        case .maintain: return "Balance is everything. Very zen 🦝☯️"
+        case .cut: return "Let's get shredded! I'll keep the snacks away 🔥"
+        case .bulk: return "Eating more? My favorite goal! 🍗"
+        case .maintain: return "Balance is everything. Very zen ☯️"
         }
     }
 

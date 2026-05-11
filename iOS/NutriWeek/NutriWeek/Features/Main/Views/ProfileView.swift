@@ -6,16 +6,7 @@ struct ProfileView: View {
         var age = ""
         var gender = ""
         var height = ""
-        var weight = ""
         var activityLevel = ""
-    }
-
-    struct EditableMeasurements {
-        var waist = ""
-        var hips = ""
-        var chest = ""
-        var arms = ""
-        var thighs = ""
     }
 
     let client: SupabaseClient = SupabaseClientFactory.shared
@@ -23,24 +14,24 @@ struct ProfileView: View {
     @State var profile: UserProfile?
     @State var results: CalculationResults?
     @State var loadingError: String?
+    /// From account email local-part (e.g. `jane.doe@…` → `JD`).
+    @State var profileInitials: String = "?"
 
     @State var editingInfo = false
     @State var infoFields = EditablePersonalInfo()
     @State var infoDraft = EditablePersonalInfo()
 
-    @State var editingMeasurements = false
-    @State var measurementFields = EditableMeasurements()
-    @State var measurementDraft = EditableMeasurements()
-
     @State var ageError: String?
     @State var heightError: String?
-    @State var weightError: String?
 
     @State var toastMessage = ""
     @State var showToast = false
     @State var showValidationAlert = false
     @State var validationAlertMessage = ""
     @State var showResetAllConfirm = false
+    @State var showDeleteAccountConfirm = false
+    @State var isDeleting = false
+    @State var showMeasurementLogSheet = false
 
     var body: some View {
         Group {
@@ -63,6 +54,19 @@ struct ProfileView: View {
             }
         } message: {
             Text("Are you sure? This will delete everything.")
+        }
+        .alert("Delete Account", isPresented: $showDeleteAccountConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete My Account", role: .destructive) {
+                Task { await handleDeleteAccount() }
+            }
+        } message: {
+            Text("This will permanently delete all your data including meal plans, food logs, measurements, and streaks. This action cannot be undone.")
+        }
+        .sheet(isPresented: $showMeasurementLogSheet) {
+            MeasurementLogSheet(onSaved: { await loadProfile() })
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
     }
 }

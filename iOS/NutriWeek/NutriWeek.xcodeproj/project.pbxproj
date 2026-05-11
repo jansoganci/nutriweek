@@ -10,17 +10,38 @@
 		3413A83E2FAA176B007674AC /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 3413A83D2FAA176B007674AC /* Auth */; };
 		3413A8402FAA176B007674AC /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 3413A83F2FAA176B007674AC /* Functions */; };
 		3413A8422FAA176B007674AC /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 3413A8412FAA176B007674AC /* Supabase */; };
+		34B110302FAA176B007674AC /* rocky-wave.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 34B110102FAA176B007674AC /* rocky-wave.mp4 */; };
+		34B110312FAA176B007674AC /* rocky-celebrate.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 34B110112FAA176B007674AC /* rocky-celebrate.mp4 */; };
+		34B110322FAA176B007674AC /* rocky-think.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 34B110122FAA176B007674AC /* rocky-think.mp4 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		3413A7F42FAA0CC2007674AC /* NutriWeek.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NutriWeek.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		34A961D32FF4B42000C8C8A1 /* NutriWeek/Support/Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = NutriWeek/Support/Config.xcconfig; sourceTree = SOURCE_ROOT; };
 		34A961D42FF4B43000C8C8A1 /* NutriWeek/Support/Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = NutriWeek/Support/Secrets.xcconfig; sourceTree = SOURCE_ROOT; };
+		34B110102FAA176B007674AC /* rocky-wave.mp4 */ = {isa = PBXFileReference; lastKnownFileType = video.mp4; path = "rocky-wave.mp4"; sourceTree = "<group>"; };
+		34B110112FAA176B007674AC /* rocky-celebrate.mp4 */ = {isa = PBXFileReference; lastKnownFileType = video.mp4; path = "rocky-celebrate.mp4"; sourceTree = "<group>"; };
+		34B110122FAA176B007674AC /* rocky-think.mp4 */ = {isa = PBXFileReference; lastKnownFileType = video.mp4; path = "rocky-think.mp4"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		34B110402FAA176B007674AC /* Exceptions for "NutriWeek" folder in "NutriWeek" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Resources/Videos/rocky-celebrate.mp4",
+				"Resources/Videos/rocky-think.mp4",
+				"Resources/Videos/rocky-wave.mp4",
+			);
+			target = 3413A7F32FAA0CC1007674AC /* NutriWeek */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3413A7F62FAA0CC2007674AC /* NutriWeek */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				34B110402FAA176B007674AC /* Exceptions for "NutriWeek" folder in "NutriWeek" target */,
+			);
 			path = NutriWeek;
 			sourceTree = "<group>";
 		};
@@ -44,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				3413A7F62FAA0CC2007674AC /* NutriWeek */,
+				34B1101F2FAA176B007674AC /* NutriWeek/Resources/Videos */,
 				34A961D32FF4B42000C8C8A1 /* NutriWeek/Support/Config.xcconfig */,
 				34A961D42FF4B43000C8C8A1 /* NutriWeek/Support/Secrets.xcconfig */,
 				3413A7F52FAA0CC2007674AC /* Products */,
@@ -56,6 +78,16 @@
 				3413A7F42FAA0CC2007674AC /* NutriWeek.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		34B1101F2FAA176B007674AC /* NutriWeek/Resources/Videos */ = {
+			isa = PBXGroup;
+			children = (
+				34B110102FAA176B007674AC /* rocky-wave.mp4 */,
+				34B110112FAA176B007674AC /* rocky-celebrate.mp4 */,
+				34B110122FAA176B007674AC /* rocky-think.mp4 */,
+			);
+			path = NutriWeek/Resources/Videos;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -128,6 +160,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				34B110302FAA176B007674AC /* rocky-wave.mp4 in Resources */,
+				34B110312FAA176B007674AC /* rocky-celebrate.mp4 in Resources */,
+				34B110322FAA176B007674AC /* rocky-think.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

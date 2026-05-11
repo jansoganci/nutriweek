@@ -17,7 +17,8 @@ export function errorResponse(
     | "AI_SCHEMA_INVALID"
     | "AI_RATE_LIMITED"
     | "UPSTREAM_ERROR"
-    | "UNAUTHORIZED",
+    | "UNAUTHORIZED"
+    | "INTERNAL",
   message: string,
   status: number,
 ): Response {
