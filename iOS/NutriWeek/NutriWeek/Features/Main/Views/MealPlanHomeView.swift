@@ -10,6 +10,8 @@ struct MealPlanHomeView: View {
     @State private var consumed = FoodMacroResult(calories: 0, protein: 0, carbs: 0, fat: 0)
     @State private var weeklyPlan: WeeklyPlan?
     @State private var showGeneratePrompt = false
+    /// Set when user confirms in the sheet; cleared when we start `handleGenerate` after dismiss (avoids SwiftUI cancelling the task with the sheet).
+    @State private var pendingGenerateAfterSheet = false
     @State private var isGenerating = false
     @State private var refreshError: String?
     @State private var showEmpty = false
@@ -93,6 +95,11 @@ struct MealPlanHomeView: View {
             generatePromptSheet
                 .presentationDetents([.height(330)])
                 .presentationDragIndicator(.visible)
+        }
+        .onChange(of: showGeneratePrompt) { _, isPresented in
+            guard !isPresented, pendingGenerateAfterSheet else { return }
+            pendingGenerateAfterSheet = false
+            Task { await handleGenerate() }
         }
     }
 
@@ -302,8 +309,8 @@ struct MealPlanHomeView: View {
                 .multilineTextAlignment(.center)
 
             Button {
+                pendingGenerateAfterSheet = true
                 showGeneratePrompt = false
-                Task { await handleGenerate() }
             } label: {
                 Text("Let's go!")
                     .font(TypographyToken.inter(size: 17, weight: .bold))
@@ -317,6 +324,7 @@ struct MealPlanHomeView: View {
             .padding(.top, 8)
 
             Button("Maybe later") {
+                pendingGenerateAfterSheet = false
                 showGeneratePrompt = false
                 showEmpty = true
             }
@@ -363,7 +371,11 @@ struct MealPlanHomeView: View {
     private func loadWeeklyPlan() async {
         weeklyPlan = try? await mealPlanRepository.loadWeeklyPlan()
         if weeklyPlan == nil {
+            showEmpty = true
             showGeneratePrompt = true
+        } else {
+            showEmpty = false
+            showGeneratePrompt = false
         }
     }
 
@@ -407,58 +419,50 @@ struct MealPlanHomeView: View {
         }
 
         do {
-            async let mon = repo.generateDay(
-                dayName: slots[0].weekdayName,
-                date: slots[0].dateISO,
-                calorieTarget: calorieTarget,
+            let onboardingProfile = try await OnboardingService.fetchOnboardingProfile()
+            guard let profile = UserProfile(onboarding: onboardingProfile) else {
+                refreshError = "Complete onboarding to generate your plan."
+                return
+            }
+            print("[MealPlanHomeView] weekly_generation_profile_loaded once=true")
+            // Build once and reuse for all 7 days to avoid per-day profile fetch drift.
+            let planTargets = GemmaPlanTargets(
+                profile: profile,
+                targetCalories: calorieTarget,
                 macros: macros
             )
-            async let tue = repo.generateDay(
-                dayName: slots[1].weekdayName,
-                date: slots[1].dateISO,
-                calorieTarget: calorieTarget,
-                macros: macros
-            )
+            var usedMealNames = Set<String>()
 
-            mergePartial(try await mon)
-            mergePartial(try await tue)
-
-            async let wed = repo.generateDay(
-                dayName: slots[2].weekdayName,
-                date: slots[2].dateISO,
-                calorieTarget: calorieTarget,
-                macros: macros
-            )
-            async let thu = repo.generateDay(
-                dayName: slots[3].weekdayName,
-                date: slots[3].dateISO,
-                calorieTarget: calorieTarget,
-                macros: macros
-            )
-            async let fri = repo.generateDay(
-                dayName: slots[4].weekdayName,
-                date: slots[4].dateISO,
-                calorieTarget: calorieTarget,
-                macros: macros
-            )
-            async let sat = repo.generateDay(
-                dayName: slots[5].weekdayName,
-                date: slots[5].dateISO,
-                calorieTarget: calorieTarget,
-                macros: macros
-            )
-            async let sun = repo.generateDay(
-                dayName: slots[6].weekdayName,
-                date: slots[6].dateISO,
-                calorieTarget: calorieTarget,
-                macros: macros
-            )
-
-            mergePartial(try await wed)
-            mergePartial(try await thu)
-            mergePartial(try await fri)
-            mergePartial(try await sat)
-            mergePartial(try await sun)
+            // One Gemini request at a time: parallel calls often return empty / truncated JSON (422 AI_SCHEMA_INVALID).
+            for slot in slots {
+                var generatedDay: DayPlan?
+                var attempt = 0
+                while generatedDay == nil, attempt < 2 {
+                    attempt += 1
+                    do {
+                        generatedDay = try await repo.generateDay(
+                            dayName: slot.weekdayName,
+                            date: slot.dateISO,
+                            targets: planTargets,
+                            excludeMealNames: Array(usedMealNames)
+                        )
+                    } catch {
+                        let detail = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                        print("[MealPlanHomeView] day_generation_failed day=\(slot.weekdayName) attempt=\(attempt) message=\(detail)")
+                        if attempt < 2 {
+                            refreshError = "\(slot.weekdayName) günü planı oluşturulamadı, tekrar deneniyor..."
+                        } else {
+                            refreshError = "\(slot.weekdayName) günü planı oluşturulamadı. Lütfen tekrar deneyin."
+                            throw error
+                        }
+                    }
+                }
+                if let generatedDay {
+                    refreshError = nil
+                    mergePartial(generatedDay)
+                    generatedDay.meals.forEach { usedMealNames.insert($0.name) }
+                }
+            }
 
             let ordered = slots.compactMap { slot in partialDays.first(where: { $0.date == slot.dateISO }) }
             guard ordered.count == 7 else {
@@ -492,7 +496,9 @@ struct MealPlanHomeView: View {
                 showInfoToast = false
             }
         } catch {
-            refreshError = "Something went wrong while generating your plan."
+            if refreshError == nil {
+                refreshError = "Something went wrong while generating your plan."
+            }
             partialDays = []
             daysReady = 0
             if weeklyPlan == nil {

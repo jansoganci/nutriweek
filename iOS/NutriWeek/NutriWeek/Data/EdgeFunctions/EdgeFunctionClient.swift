@@ -2,7 +2,7 @@ import Foundation
 import Supabase
 
 enum EdgeFunctionError: Error, LocalizedError {
-    case httpStatus(code: Int, message: String)
+    case httpStatus(code: Int, message: String, stage: String? = nil, details: String? = nil)
     case relay
     case decoding
     case aiTimeout
@@ -13,8 +13,10 @@ enum EdgeFunctionError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .httpStatus(let code, let message):
-            return "Edge function failed (\(code)): \(message)"
+        case .httpStatus(let code, let message, let stage, let details):
+            let stageText = stage.map { " [\($0)]" } ?? ""
+            let detailsText = details.map { " (\($0))" } ?? ""
+            return "Edge function failed (\(code))\(stageText): \(message)\(detailsText)"
         case .relay:
             return "Edge relay error."
         case .decoding:
@@ -56,7 +58,7 @@ struct EdgeFunctionClient {
             let options = FunctionInvokeOptions(body: payload, encoder: encoder)
             return try await client.functions.invoke(functionName, options: options, decoder: decoder)
         } catch {
-            throw map(error)
+            throw map(error, functionName: functionName)
         }
     }
 
@@ -64,38 +66,46 @@ struct EdgeFunctionClient {
         do {
             return try await client.functions.invoke(functionName, decoder: decoder)
         } catch {
-            throw map(error)
+            throw map(error, functionName: functionName)
         }
     }
 
-    private func map(_ error: Error) -> EdgeFunctionError {
+    private func map(_ error: Error, functionName: String) -> EdgeFunctionError {
         if let functionsError = error as? FunctionsError {
             switch functionsError {
             case .relayError:
+                print("[EdgeFunctionClient] relay_error function=\(functionName)")
                 return .relay
             case .httpError(let code, let data):
                 let response = decodeErrorResponse(from: data)
+                let logPayload = """
+                [EdgeFunctionClient] http_error function=\(functionName) status=\(code) error=\(response.code ?? "unknown") stage=\(response.stage ?? "none") message=\(response.message) details=\(response.details ?? "none")
+                """
+                print(logPayload)
                 if let mapped = mapStableCode(response.code) {
                     return mapped
                 }
-                return .httpStatus(code: code, message: response.message)
+                return .httpStatus(
+                    code: code,
+                    message: response.message,
+                    stage: response.stage,
+                    details: response.details
+                )
             }
         }
 
         if error is DecodingError {
+            print("[EdgeFunctionClient] decoding_error function=\(functionName) message=\(error.localizedDescription)")
             return .decoding
         }
 
+        print("[EdgeFunctionClient] unknown_error function=\(functionName) message=\(error.localizedDescription)")
         return .unknown(message: error.localizedDescription)
     }
 
-    private func decodeMessage(from data: Data) -> String {
-        decodeErrorResponse(from: data).message
-    }
-
-    private func decodeErrorResponse(from data: Data) -> (code: String?, message: String) {
+    private func decodeErrorResponse(from data: Data) -> (code: String?, message: String, stage: String?, details: String?) {
         if data.isEmpty {
-            return (nil, "No response body.")
+            return (nil, "No response body.", nil, nil)
         }
 
         if
@@ -103,10 +113,12 @@ struct EdgeFunctionClient {
             let message = object["message"] as? String ?? object["error"] as? String
         {
             let code = object["error"] as? String
-            return (code, message)
+            let stage = object["stage"] as? String
+            let details = object["details"] as? String
+            return (code, message, stage, details)
         }
 
-        return (nil, String(decoding: data, as: UTF8.self))
+        return (nil, String(decoding: data, as: UTF8.self), nil, nil)
     }
 
     private func mapStableCode(_ code: String?) -> EdgeFunctionError? {

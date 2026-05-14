@@ -76,7 +76,10 @@ enum MealPlanMapper {
                             emoji: "🍽️",
                             protein: meal.protein,
                             carbs: meal.carbs,
-                            fat: meal.fat
+                            fat: meal.fat,
+                            dietaryTags: nil,
+                            cuisine: nil,
+                            ingredients: nil
                         )
                     }
                 )

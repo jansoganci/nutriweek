@@ -19,7 +19,7 @@ extension UserProfile {
             activityLevel: activityLevel,
             goal: goal,
             measurements: nil,
-            dietaryPreferences: [],
+            dietaryPreferences: profile.dietaryPreferenceKeys.compactMap(DietaryPreference.init(rawValue:)),
             onboardingComplete: profile.onboardingComplete,
             createdAt: "",
             updatedAt: ""

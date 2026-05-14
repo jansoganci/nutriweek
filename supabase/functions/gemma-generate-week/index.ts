@@ -35,6 +35,26 @@ Deno.serve(async (req) => {
     return errorResponse("BAD_REQUEST", "Invalid JSON body", 400);
   }
 
+  if (!payload.profile || typeof payload.profile !== "object") {
+    return errorResponse("BAD_REQUEST", "profile is required", 400);
+  }
+  if (typeof payload.targetCalories !== "number" || Number.isNaN(payload.targetCalories)) {
+    return errorResponse("BAD_REQUEST", "targetCalories is required", 400);
+  }
+  const m = payload.macros;
+  if (
+    !m ||
+    typeof m.protein !== "number" ||
+    typeof m.carbs !== "number" ||
+    typeof m.fat !== "number"
+  ) {
+    return errorResponse(
+      "BAD_REQUEST",
+      "macros with numeric protein, carbs, and fat are required",
+      400,
+    );
+  }
+
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) {
     return errorResponse("AI_UNAVAILABLE", "Missing GEMINI_API_KEY secret", 500);

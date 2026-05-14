@@ -47,22 +47,45 @@ struct SupabaseMealPlanRepository: MealPlanRepositoryProtocol {
     }
 
     func generateWeeklyPlan() async throws -> WeeklyPlan {
-        let generated = try await gemmaService.generateWeeklyPlan()
+        let onboardingProfile = try await OnboardingService.fetchOnboardingProfile()
+        guard let profile = UserProfile(onboarding: onboardingProfile) else {
+            throw MealPlanGenerationError.profileIncomplete
+        }
+        let calculations = NutritionCalculationService.calculateAll(profile: profile)
+        let targets = GemmaPlanTargets(
+            profile: profile,
+            targetCalories: calculations.targetCalories,
+            macros: calculations.macros
+        )
+        let weekStart = Self.isoWeekStartMondayISO()
+        let generated = try await gemmaService.generateWeeklyPlan(targets: targets, weekStartDate: weekStart)
         let weeklyPlan = MealPlanMapper.toDomain(dto: generated)
         try await saveWeeklyPlan(weeklyPlan)
         return weeklyPlan
     }
 
-    func generateDay(dayName: String, date: String, calorieTarget: Int, macros: MacroGrams) async throws -> DayPlan {
-        let onboardingProfile = try await Task { @MainActor in
-            try await OnboardingService.fetchOnboardingProfile()
-        }.value
-        guard let profile = UserProfile(onboarding: onboardingProfile) else {
-            throw MealPlanGenerationError.profileIncomplete
+    /// ISO-8601 Monday date for the current week (matches meal plan home week slots).
+    private static func isoWeekStartMondayISO(reference: Date = Date()) -> String {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = .current
+        guard let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: reference))
+        else {
+            return String(ISO8601DateFormatter().string(from: reference).prefix(10))
         }
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: weekStart)
+    }
 
-        let targets = GemmaPlanTargets(profile: profile, targetCalories: calorieTarget, macros: macros)
-        let dto = try await gemmaService.generateDay(dayName: dayName, date: date, targets: targets)
+    func generateDay(dayName: String, date: String, targets: GemmaPlanTargets, excludeMealNames: [String]) async throws -> DayPlan {
+        let dto = try await gemmaService.generateDay(
+            dayName: dayName,
+            date: date,
+            targets: targets,
+            excludeMealNames: excludeMealNames
+        )
         return MealPlanMapper.dayPlan(from: dto)
     }
 
