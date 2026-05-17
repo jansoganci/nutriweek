@@ -10,11 +10,10 @@ struct OnboardingResultsView: View {
     @State private var errorMessage: String?
 
     private var rockyMessage: String {
-        switch results.bmiCategory.label {
-        case "Healthy": return "Looking good! Now let's eat right ✨"
-        case "Underweight": return "We'll get you fueled up properly! 💪"
-        case "Overweight": return "No worries, Rocky's got your back! ❤️"
-        default: return "Every journey starts with one step. Let's go! 🌟"
+        switch goal {
+        case .cut: return String(localized: "onboarding.results.rocky.cut")
+        case .bulk: return String(localized: "onboarding.results.rocky.bulk")
+        case .maintain: return String(localized: "onboarding.results.rocky.maintain")
         }
     }
 
@@ -30,7 +29,7 @@ struct OnboardingResultsView: View {
             if !loaded {
                 VStack(spacing: 12) {
                     RockyMascotView(mood: .thinking, size: RockyMascotView.Size.medium.rawValue)
-                    Text("Crunching your numbers…")
+                    Text(LocalizedStringKey("onboarding.results.crunching"))
                         .font(TypographyToken.inter(size: 15, weight: .regular))
                         .foregroundStyle(ColorToken.textSecondary)
                 }
@@ -62,13 +61,13 @@ struct OnboardingResultsView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.bottom, 4)
 
-                        Text("Your plan is ready!")
+                        Text(LocalizedStringKey("onboarding.results.ready"))
                             .font(TypographyToken.inter(size: 28, weight: .bold))
                             .foregroundStyle(ColorToken.textPrimary)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
 
-                        Text("Here's what we calculated for you")
+                        Text(LocalizedStringKey("onboarding.results.calculated"))
                             .font(TypographyToken.inter(size: 15, weight: .regular))
                             .foregroundStyle(ColorToken.textSecondary)
                             .multilineTextAlignment(.center)
@@ -87,7 +86,7 @@ struct OnboardingResultsView: View {
                                     ProgressView()
                                         .tint(.white)
                                 } else {
-                                    Text("Let's Start!")
+                                    Text(LocalizedStringKey("onboarding.results.start"))
                                         .font(TypographyToken.inter(size: 18, weight: .bold))
                                         .foregroundStyle(Color.white)
                                 }
@@ -129,7 +128,7 @@ struct OnboardingResultsView: View {
 
     private var bmiCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Your BMI")
+            Text(LocalizedStringKey("onboarding.results.your_bmi"))
                 .font(TypographyToken.inter(size: 13, weight: .semibold))
                 .foregroundStyle(ColorToken.textSecondary)
                 .tracking(0.8)
@@ -215,7 +214,7 @@ struct OnboardingResultsView: View {
 
     private var dailyTargetsCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Your Daily Targets")
+            Text(LocalizedStringKey("onboarding.results.your_targets"))
                 .font(TypographyToken.inter(size: 13, weight: .semibold))
                 .foregroundStyle(ColorToken.textSecondary)
                 .tracking(0.8)
@@ -223,13 +222,13 @@ struct OnboardingResultsView: View {
                 .padding(.bottom, 14)
 
             VStack(spacing: 0) {
-                statRow(emoji: "🔥", label: "Calories", value: "\(results.targetCalories) kcal")
+                statRow(emoji: "🔥", label: String(localized: "macro.calories"), value: "\(results.targetCalories) kcal")
                 Divider().background(ColorToken.border)
-                statRow(emoji: "🥩", label: "Protein", value: "\(results.macros.protein) g")
+                statRow(emoji: "🥩", label: String(localized: "macro.protein"), value: "\(results.macros.protein) g")
                 Divider().background(ColorToken.border)
-                statRow(emoji: "🍚", label: "Carbs", value: "\(results.macros.carbs) g")
+                statRow(emoji: "🍚", label: String(localized: "macro.carbs"), value: "\(results.macros.carbs) g")
                 Divider().background(ColorToken.border)
-                statRow(emoji: "🥑", label: "Fat", value: "\(results.macros.fat) g")
+                statRow(emoji: "🥑", label: String(localized: "macro.fat"), value: "\(results.macros.fat) g")
             }
         }
         .padding(20)
@@ -258,7 +257,7 @@ struct OnboardingResultsView: View {
 
     private var macroSplitCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Macro Split")
+            Text(LocalizedStringKey("onboarding.results.macro_split"))
                 .font(TypographyToken.inter(size: 13, weight: .semibold))
                 .foregroundStyle(ColorToken.textSecondary)
                 .tracking(0.8)
@@ -267,21 +266,21 @@ struct OnboardingResultsView: View {
 
             VStack(spacing: 14) {
                 MacroBarView(
-                    label: "Protein",
+                    label: String(localized: "macro.protein"),
                     grams: results.macros.protein,
                     totalCalories: results.targetCalories,
                     caloriesPerGram: 4,
                     color: ColorToken.primary
                 )
                 MacroBarView(
-                    label: "Carbs",
+                    label: String(localized: "macro.carbs"),
                     grams: results.macros.carbs,
                     totalCalories: results.targetCalories,
                     caloriesPerGram: 4,
                     color: ColorToken.success
                 )
                 MacroBarView(
-                    label: "Fat",
+                    label: String(localized: "macro.fat"),
                     grams: results.macros.fat,
                     totalCalories: results.targetCalories,
                     caloriesPerGram: 9,
@@ -302,7 +301,7 @@ struct OnboardingResultsView: View {
     private var goalCard: some View {
         let meta = goalMeta(goal)
         return VStack(alignment: .leading, spacing: 0) {
-            Text("Your Goal")
+            Text(LocalizedStringKey("onboarding.goal.title"))
                 .font(TypographyToken.inter(size: 13, weight: .semibold))
                 .foregroundStyle(ColorToken.textSecondary)
                 .tracking(0.8)
@@ -334,9 +333,9 @@ struct OnboardingResultsView: View {
 
     private func goalMeta(_ g: Goal) -> (emoji: String, title: String, desc: String) {
         switch g {
-        case .cut: return ("🔥", "Lose Fat", "500 kcal daily deficit")
-        case .bulk: return ("💪", "Build Muscle", "300 kcal daily surplus")
-        case .maintain: return ("⚖️", "Stay Balanced", "Eating at maintenance")
+        case .cut: return ("🔥", String(localized: "goal.cut.short"), String(localized: "onboarding.results.goal.cut_sub"))
+        case .bulk: return ("💪", String(localized: "goal.bulk.short"), String(localized: "onboarding.results.goal.bulk_sub"))
+        case .maintain: return ("⚖️", String(localized: "goal.maintain.short"), String(localized: "onboarding.results.goal.maintain_sub"))
         }
     }
 
@@ -378,7 +377,7 @@ private extension CalculationResults {
     static var fallback: CalculationResults {
         CalculationResults(
             bmi: 0,
-            bmiCategory: BMICategory(label: "Healthy", colorHex: "#4CAF50"),
+            bmiCategory: BMICategory(label: String(localized: "bmi.healthy"), colorHex: "#4CAF50"),
             bmr: 0,
             tdee: 0,
             targetCalories: 0,

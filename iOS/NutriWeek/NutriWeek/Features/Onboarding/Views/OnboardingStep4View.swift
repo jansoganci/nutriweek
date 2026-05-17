@@ -3,30 +3,30 @@ import SwiftUI
 struct OnboardingStep4View: View {
     @Bindable var coordinator: OnboardingCoordinator
 
+    @State private var goal: Goal = .maintain
     @State private var selected: Set<String> = []
     @State private var saving = false
     @State private var errorMessage: String?
 
-    private let options: [(String, String, String)] = [
-        ("everything", "🥩", "Everything"),
-        ("vegetarian", "🥬", "Vegetarian"),
-        ("vegan", "🌱", "Vegan"),
-        ("gluten_free", "🌾", "Gluten Free"),
-        ("lactose_free", "🥛", "Lactose Free"),
-        ("halal", "✅", "Halal"),
-        ("no_pork", "🐷", "No Pork"),
-        ("no_seafood", "🐟", "No Seafood"),
-    ]
+    private var options: [(String, String, String)] {
+        [
+            ("everything", "🥩", String(localized: "onboarding.step4.everything")),
+            ("vegetarian", "🥬", String(localized: "onboarding.step4.vegetarian")),
+            ("vegan", "🌱", String(localized: "onboarding.step4.vegan")),
+            ("gluten_free", "🌾", String(localized: "onboarding.step4.gluten_free")),
+            ("lactose_free", "🥛", String(localized: "onboarding.step4.lactose_free")),
+            ("halal", "✅", String(localized: "onboarding.step4.halal")),
+            ("no_pork", "🐷", String(localized: "onboarding.step4.no_pork")),
+            ("no_seafood", "🐟", String(localized: "onboarding.step4.no_seafood")),
+        ]
+    }
 
     private var rockyMessage: String {
-        let keys = Array(selected)
-        if keys.isEmpty { return "Any food rules I should know about? 🍽️" }
-        if keys.contains("everything") { return "My kind of human! 🍕🍗🥗" }
-        if keys.contains("vegan") { return "A fellow plant lover! 🌱" }
-        if keys.contains("gluten_free") { return "Got it, no bread crimes! 🌾" }
-        if keys.contains("halal") { return "Noted! Clean eating all the way ✅" }
-        if keys.count > 1 { return "Complex taste! I respect it" }
-        return "Any food rules I should know about? 🍽️"
+        switch goal {
+        case .cut: return String(localized: "onboarding.step4.rocky.cut")
+        case .bulk: return String(localized: "onboarding.step4.rocky.bulk")
+        case .maintain: return String(localized: "onboarding.step4.rocky.maintain")
+        }
     }
 
     var body: some View {
@@ -41,12 +41,12 @@ struct OnboardingStep4View: View {
                 .padding(.top, OnboardingMetrics.mascotTop)
                 .padding(.bottom, 24)
 
-                Text("Dietary Preferences")
+                Text(LocalizedStringKey("profile.field.dietary_preferences"))
                     .font(TypographyToken.inter(size: 26, weight: .bold))
                     .foregroundStyle(ColorToken.textPrimary)
                     .padding(.bottom, 4)
 
-                Text("Select all that apply")
+                Text(LocalizedStringKey("onboarding.step4.select_hint"))
                     .font(TypographyToken.inter(size: 14, weight: .regular))
                     .foregroundStyle(ColorToken.textSecondary)
                     .padding(.bottom, 20)
@@ -67,7 +67,7 @@ struct OnboardingStep4View: View {
                 }
 
                 OnboardingFooterButton(
-                    title: "See My Results",
+                    title: String(localized: "onboarding.step4.see_results"),
                     isPrimaryEnabled: true,
                     isLoading: saving,
                     action: { Task { await handleContinue() } }
@@ -89,6 +89,7 @@ struct OnboardingStep4View: View {
         .scrollDismissesKeyboard(.interactively)
         .background(ColorToken.background)
         .toolbar(.hidden, for: .navigationBar)
+        .task { await loadGoal() }
     }
 
     @ViewBuilder
@@ -134,6 +135,12 @@ struct OnboardingStep4View: View {
             items.append(key)
         }
         selected = Set(items)
+    }
+
+    private func loadGoal() async {
+        guard let profile = try? await OnboardingService.fetchOnboardingProfile(),
+              let storedGoal = profile.goal else { return }
+        goal = storedGoal
     }
 
     private func handleContinue() async {

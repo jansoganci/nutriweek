@@ -43,6 +43,23 @@ struct SupabaseFoodLogRepository: FoodLogRepositoryProtocol {
         }
     }
 
+    func loadEntries(from startDate: Date, to endDate: Date) async throws -> [FoodLogEntry] {
+        let userId = try await requireUserId()
+        let start = dateKey(for: startDate)
+        let end = dateKey(for: endDate)
+
+        let rows: [FoodLogMapper.FoodLogRow] = try await client.from("food_log_entries")
+            .select("id, food_name, grams, calories, protein_g, carbs_g, fat_g, logged_at, log_date")
+            .eq("user_id", value: userId)
+            .gte("log_date", value: start)
+            .lte("log_date", value: end)
+            .order("log_date", ascending: false)
+            .order("logged_at", ascending: false)
+            .execute()
+            .value
+        return rows.map(FoodLogMapper.toDomain)
+    }
+
     func addLogEntry(_ entry: FoodLogEntry) async throws {
         let userId = try await requireUserId()
         let payload = FoodLogMapper.toInsert(entry, userId: userId)
@@ -75,6 +92,15 @@ struct SupabaseFoodLogRepository: FoodLogRepositoryProtocol {
     }
 
     private func todayISO() -> String {
-        String(Date().ISO8601Format().prefix(10))
+        dateKey(for: Date())
+    }
+
+    private func dateKey(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 }

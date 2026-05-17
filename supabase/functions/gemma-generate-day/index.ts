@@ -242,6 +242,7 @@ function buildFullDayPrompt(
   excludeNames: Set<string>,
 ): string {
   return `You are a nutritionist. Return JSON only.
+Meal names must be traditional Turkish dish names written in Turkish. Prefer Turkish cuisine and authentic Turkish meals.
 Generate one day meal plan for ${input.dayName} (${input.date}).
 
 Daily targets:
@@ -283,6 +284,7 @@ function buildPartialMealsPrompt(
   }).join("\n");
 
   return `You are a nutritionist. Return JSON only.
+Meal names must be traditional Turkish dish names written in Turkish. Prefer Turkish cuisine and authentic Turkish meals.
 Generate only these missing meal types for ${input.dayName} (${input.date}): ${missingMealTypes.join(", ")}.
 
 Existing meals already selected:

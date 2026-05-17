@@ -5,9 +5,9 @@ extension ProfileView {
         VStack {
             if let loadingError, !loadingError.isEmpty {
                 ErrorStateView(
-                    title: "Profile failed to load",
+                    title: String(localized: "profile.error.load_title"),
                     message: loadingError,
-                    retryTitle: "Retry"
+                    retryTitle: String(localized: "common.retry")
                 ) {
                     Task { await loadProfile() }
                 }
@@ -28,7 +28,7 @@ extension ProfileView {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(spacing: 16) {
-                    Text("My Profile").font(TypographyToken.inter(size: 20, weight: .bold)).foregroundStyle(ColorToken.textPrimary).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(LocalizedStringKey("profile.title")).font(TypographyToken.inter(size: 20, weight: .bold)).foregroundStyle(ColorToken.textPrimary).frame(maxWidth: .infinity, alignment: .leading)
                     profileAvatarHeader(for: profile.goal, initials: profileInitials)
                     statsRow(profile: profile, results: results)
                     dailyTargetsCard(results: results)
@@ -68,9 +68,9 @@ extension ProfileView {
 
     func statsRow(profile: UserProfile, results: CalculationResults) -> some View {
         HStack(spacing: 10) {
-            statCard(label: "BMI", value: oneDecimal(results.bmi), sub: results.bmiCategory.label, subColor: Color(hex: results.bmiCategory.colorHex))
-            statCard(label: "Daily Calories", value: "\(results.targetCalories)", sub: "kcal", subColor: nil)
-            statCard(label: "Goal", value: goalLabel(profile.goal), sub: nil, subColor: nil)
+            statCard(label: String(localized: "profile.stats.bmi"), value: oneDecimal(results.bmi), sub: results.bmiCategory.label, subColor: Color(hex: results.bmiCategory.colorHex))
+            statCard(label: String(localized: "profile.stats.daily_calories"), value: "\(results.targetCalories)", sub: "kcal", subColor: nil)
+            statCard(label: String(localized: "profile.stats.goal"), value: goalLabel(profile.goal), sub: nil, subColor: nil)
         }
     }
 
@@ -85,14 +85,14 @@ extension ProfileView {
 
     func dailyTargetsCard(results: CalculationResults) -> some View {
         card {
-            Text("Daily Targets").font(TypographyToken.inter(size: 16, weight: .bold)).foregroundStyle(ColorToken.textPrimary).frame(maxWidth: .infinity, alignment: .leading)
-            macroRow("🔥", "Calories", "\(results.targetCalories)", "kcal")
+            Text(LocalizedStringKey("profile.targets.title")).font(TypographyToken.inter(size: 16, weight: .bold)).foregroundStyle(ColorToken.textPrimary).frame(maxWidth: .infinity, alignment: .leading)
+            macroRow("🔥", String(localized: "macro.calories"), "\(results.targetCalories)", "kcal")
             divider
-            macroRow("🥩", "Protein", "\(results.macros.protein)", "g")
+            macroRow("🥩", String(localized: "macro.protein"), "\(results.macros.protein)", "g")
             divider
-            macroRow("🍚", "Carbs", "\(results.macros.carbs)", "g")
+            macroRow("🍚", String(localized: "macro.carbs"), "\(results.macros.carbs)", "g")
             divider
-            macroRow("🥑", "Fat", "\(results.macros.fat)", "g")
+            macroRow("🥑", String(localized: "macro.fat"), "\(results.macros.fat)", "g")
         }
     }
 
@@ -108,34 +108,34 @@ extension ProfileView {
     func personalInfoCard(profile: UserProfile) -> some View {
         card {
             HStack {
-                Text("Personal Info").font(TypographyToken.inter(size: 16, weight: .bold)).foregroundStyle(ColorToken.textPrimary)
+                Text(LocalizedStringKey("profile.personal_info.title")).font(TypographyToken.inter(size: 16, weight: .bold)).foregroundStyle(ColorToken.textPrimary)
                 Spacer(minLength: 0)
                 if editingInfo {
                     HStack(spacing: 8) {
-                        Button("Cancel") { infoDraft = infoFields; editingInfo = false; clearFieldErrors() }
+                        Button(LocalizedStringKey("common.cancel")) { infoDraft = infoFields; editingInfo = false; clearFieldErrors() }
                             .font(TypographyToken.inter(size: 13, weight: .semibold)).foregroundStyle(ColorToken.textSecondary).padding(.horizontal, 12).padding(.vertical, 5).background(ColorToken.muted).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
-                        Button("Save") { Task { await handleSaveInfo() } }
+                        Button(LocalizedStringKey("common.save")) { Task { await handleSaveInfo() } }
                             .font(TypographyToken.inter(size: 13, weight: .semibold)).foregroundStyle(ColorToken.onPrimary).padding(.horizontal, 14).padding(.vertical, 5).background(ColorToken.primary).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
                     }
                 } else {
-                    Button("Edit") { infoDraft = infoFields; editingInfo = true }
+                    Button(LocalizedStringKey("common.edit")) { infoDraft = infoFields; editingInfo = true }
                         .font(TypographyToken.inter(size: 13, weight: .semibold)).foregroundStyle(ColorToken.primary).padding(.horizontal, 14).padding(.vertical, 5).background(ColorToken.secondary).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
                 }
             }
             if editingInfo {
-                infoInput("Age", text: $infoDraft.age, placeholder: "e.g. 28", keyboard: .numberPad, error: ageError)
-                infoInput("Gender", text: $infoDraft.gender, placeholder: "male / female / other", keyboard: .default, error: nil)
-                infoInput("Height (cm)", text: $infoDraft.height, placeholder: "e.g. 175", keyboard: .decimalPad, error: heightError)
-                infoInput("Activity Level", text: $infoDraft.activityLevel, placeholder: "sedentary / lightly_active / moderately_active / very_active / extra_active", keyboard: .default, error: nil)
+                infoInput(String(localized: "profile.field.age"), text: $infoDraft.age, placeholder: String(localized: "profile.placeholder.age"), keyboard: .numberPad, error: ageError)
+                infoInput(String(localized: "profile.field.gender"), text: $infoDraft.gender, placeholder: String(localized: "profile.placeholder.gender"), keyboard: .default, error: nil)
+                infoInput(String(localized: "profile.field.height_cm"), text: $infoDraft.height, placeholder: String(localized: "profile.placeholder.height_cm"), keyboard: .decimalPad, error: heightError)
+                infoInput(String(localized: "profile.field.activity_level"), text: $infoDraft.activityLevel, placeholder: String(localized: "profile.placeholder.activity_level"), keyboard: .default, error: nil)
             } else {
-                infoRow("Age", "\(Int(profile.age)) yrs")
-                infoRow("Gender", profile.gender.rawValue.capitalized)
-                infoRow("Height", "\(Int(profile.height)) cm")
-                infoRow("Activity Level", activityLabel(profile.activityLevel))
+                infoRow(String(localized: "profile.field.age"), "\(Int(profile.age)) \(String(localized: "common.years"))")
+                infoRow(String(localized: "profile.field.gender"), profile.gender.rawValue.capitalized)
+                infoRow(String(localized: "profile.field.height_cm"), "\(Int(profile.height)) cm")
+                infoRow(String(localized: "profile.field.activity_level"), activityLabel(profile.activityLevel))
                 HStack(alignment: .top, spacing: 8) {
-                    Text("Dietary Prefs").font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.mutedForeground).frame(width: 110, alignment: .leading)
+                    Text(LocalizedStringKey("profile.field.dietary_preferences")).font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.mutedForeground).frame(width: 110, alignment: .leading)
                     if profile.dietaryPreferences.isEmpty {
-                        Text("None").font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textTertiary).italic()
+                        Text(LocalizedStringKey("common.none")).font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textTertiary).italic()
                     } else { dietaryPills(profile.dietaryPreferences) }
                 }
             }
@@ -146,36 +146,36 @@ extension ProfileView {
         let hasMeasurements = profile.measurements.map { m in [m.waist, m.hips, m.chest, m.arms, m.thighs].contains { $0 != nil } } ?? false
         return card {
             HStack {
-                Text("Body Measurements").font(TypographyToken.inter(size: 16, weight: .bold)).foregroundStyle(ColorToken.textPrimary)
+                Text(LocalizedStringKey("profile.measurements.title")).font(TypographyToken.inter(size: 16, weight: .bold)).foregroundStyle(ColorToken.textPrimary)
                 Spacer(minLength: 0)
-                Button("+ Log New") { showMeasurementLogSheet = true }
+                Button(LocalizedStringKey("profile.measurements.log_new")) { showMeasurementLogSheet = true }
                     .font(TypographyToken.inter(size: 13, weight: .semibold)).foregroundStyle(ColorToken.primary).padding(.horizontal, 14).padding(.vertical, 5).background(ColorToken.secondary).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
             }
-            infoRow("Weight", "\(oneDecimal(profile.weight)) kg")
+            infoRow(String(localized: "profile.measurements.weight"), "\(oneDecimal(profile.weight)) kg")
             if hasMeasurements {
-                if let v = profile.measurements?.waist { infoRow("Waist", "\(oneDecimal(v)) cm") }
-                if let v = profile.measurements?.hips { infoRow("Hips", "\(oneDecimal(v)) cm") }
-                if let v = profile.measurements?.chest { infoRow("Chest", "\(oneDecimal(v)) cm") }
-                if let v = profile.measurements?.arms { infoRow("Left Arm", "\(oneDecimal(v)) cm") }
-                if let v = profile.measurements?.thighs { infoRow("Left Leg", "\(oneDecimal(v)) cm") }
+                if let v = profile.measurements?.waist { infoRow(String(localized: "profile.measurements.waist"), "\(oneDecimal(v)) cm") }
+                if let v = profile.measurements?.hips { infoRow(String(localized: "profile.measurements.hips"), "\(oneDecimal(v)) cm") }
+                if let v = profile.measurements?.chest { infoRow(String(localized: "profile.measurements.chest"), "\(oneDecimal(v)) cm") }
+                if let v = profile.measurements?.arms { infoRow(String(localized: "profile.measurements.left_arm"), "\(oneDecimal(v)) cm") }
+                if let v = profile.measurements?.thighs { infoRow(String(localized: "profile.measurements.left_leg"), "\(oneDecimal(v)) cm") }
             } else {
-                Text("Add measurements to track your progress over time").font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textTertiary).italic().frame(maxWidth: .infinity).padding(.vertical, 8)
+                Text(LocalizedStringKey("profile.measurements.empty")).font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textTertiary).italic().frame(maxWidth: .infinity).padding(.vertical, 8)
             }
         }
     }
 
     var settingsCard: some View {
         card {
-            Text("Settings").font(TypographyToken.inter(size: 16, weight: .bold)).foregroundStyle(ColorToken.textPrimary).frame(maxWidth: .infinity, alignment: .leading)
-            Button("Reset Weekly Plan") { UserDefaults.standard.removeObject(forKey: "weeklyPlan"); showToastMessage("Weekly plan reset! ✅") }
+            Text(LocalizedStringKey("profile.settings.title")).font(TypographyToken.inter(size: 16, weight: .bold)).foregroundStyle(ColorToken.textPrimary).frame(maxWidth: .infinity, alignment: .leading)
+            Button(LocalizedStringKey("profile.settings.reset_weekly_plan")) { UserDefaults.standard.removeObject(forKey: "weeklyPlan"); showToastMessage(String(localized: "profile.toast.weekly_plan_reset")) }
                 .font(TypographyToken.inter(size: 14, weight: .semibold)).foregroundStyle(ColorToken.textPrimary).frame(maxWidth: .infinity).padding(.vertical, 12).background(ColorToken.muted).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
                 .disabled(isDeleting)
             divider
-            Button("Reset All Data 🗑️") { showResetAllConfirm = true }
+            Button(LocalizedStringKey("profile.settings.reset_all_data")) { showResetAllConfirm = true }
                 .font(TypographyToken.inter(size: 14, weight: .semibold)).foregroundStyle(ColorToken.destructive).frame(maxWidth: .infinity).padding(.vertical, 12).background(ColorToken.destructiveSurface).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
                 .disabled(isDeleting)
             divider
-            Button("Delete Account") { showDeleteAccountConfirm = true }
+            Button(LocalizedStringKey("profile.settings.delete_account")) { showDeleteAccountConfirm = true }
                 .font(TypographyToken.inter(size: 14, weight: .semibold)).foregroundStyle(ColorToken.destructive).frame(maxWidth: .infinity).padding(.vertical, 12).background(ColorToken.destructiveSurface).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).buttonStyle(.plain)
                 .disabled(isDeleting)
         }

@@ -31,27 +31,33 @@ struct MainTabView: View {
             MealPlanHomeView(
                 mealPlanRepository: coordinator.mealPlanRepository,
                 foodLogRepository: coordinator.foodLogRepository,
+                activityLogRepository: coordinator.activityLogRepository,
                 streakService: coordinator.streakService,
-                onSwitchToLogTab: { coordinator.selectedTab = .quickLog }
+                onSwitchToActivityTab: { coordinator.selectedTab = .activity }
             )
                 .tag(MainTabCoordinator.Tab.mealPlan)
                 .tabItem {
-                    Label("Meal Plan", systemImage: "calendar")
+                    Label(LocalizedStringKey("tab.meal_plan"), systemImage: "calendar")
                 }
 
             LogView(repository: coordinator.foodLogRepository)
                 .tag(MainTabCoordinator.Tab.quickLog)
                 .tabItem {
-                    Label("Log", systemImage: "fork.knife")
+                    Label(LocalizedStringKey("tab.log"), systemImage: "fork.knife")
+                }
+
+            ActivityLogView(repository: coordinator.activityLogRepository)
+                .tag(MainTabCoordinator.Tab.activity)
+                .tabItem {
+                    Label(LocalizedStringKey("activity.title"), systemImage: "flame.fill")
                 }
 
             ProfileView()
                 .tag(MainTabCoordinator.Tab.profile)
                 .tabItem {
-                    Label("Profile", systemImage: "person")
+                    Label(LocalizedStringKey("tab.profile"), systemImage: "person")
                 }
         }
         .tint(Color(hex: "#FF6B35"))
     }
 }
-

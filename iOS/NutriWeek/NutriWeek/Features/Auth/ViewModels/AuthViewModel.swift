@@ -35,12 +35,12 @@ final class AuthViewModel {
         errorMessage = nil
 
         guard isValidEmail(email) else {
-            errorMessage = "Enter a valid email address."
+            errorMessage = String(localized: "auth.validation.email_invalid")
             return
         }
 
         guard password.count >= 6 else {
-            errorMessage = "Password must be at least 6 characters."
+            errorMessage = String(localized: "auth.validation.password_short")
             return
         }
 
@@ -62,17 +62,17 @@ final class AuthViewModel {
         errorMessage = nil
 
         guard isValidEmail(email) else {
-            errorMessage = "Enter a valid email address."
+            errorMessage = String(localized: "auth.validation.email_invalid")
             return
         }
 
         guard password.count >= 6 else {
-            errorMessage = "Password must be at least 6 characters."
+            errorMessage = String(localized: "auth.validation.password_short")
             return
         }
 
         guard password == confirmPassword else {
-            errorMessage = "Passwords do not match."
+            errorMessage = String(localized: "auth.validation.passwords_mismatch")
             return
         }
 
@@ -118,7 +118,7 @@ final class AuthViewModel {
     private func friendlyMessage(for error: Error) -> String {
         let text = error.localizedDescription
         if text.isEmpty {
-            return "Something went wrong. Please try again."
+            return String(localized: "auth.error.generic_retry")
         }
         return text
     }

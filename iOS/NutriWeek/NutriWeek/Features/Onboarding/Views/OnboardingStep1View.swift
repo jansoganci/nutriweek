@@ -7,6 +7,7 @@ struct OnboardingStep1View: View {
     @State private var age = ""
     @State private var height = ""
     @State private var weight = ""
+    @State private var goal: Goal?
     @State private var activityLevel: ActivityLevel?
     @State private var saving = false
     @State private var errorMessage: String?
@@ -18,13 +19,13 @@ struct OnboardingStep1View: View {
     @State private var shakeActivity: CGFloat = 0
 
     private var rockyMessage: String {
-        guard let activityLevel else {
-            return "Hey! I'm Rocky — let's build your perfect meal plan!"
+        guard let goal else {
+            return String(localized: "onboarding.step1.rocky.intro")
         }
-        switch activityLevel {
-        case .sedentary: return "No worries, we all start somewhere!"
-        case .lightlyActive, .moderatelyActive, .veryActive: return "Nice! I like your style"
-        case .extraActive: return "Wow, you're a machine! 💪"
+        switch goal {
+        case .cut: return String(localized: "onboarding.step1.rocky.cut")
+        case .bulk: return String(localized: "onboarding.step1.rocky.bulk")
+        case .maintain: return String(localized: "onboarding.step1.rocky.maintain")
         }
     }
 
@@ -67,7 +68,7 @@ struct OnboardingStep1View: View {
                 .padding(.top, OnboardingMetrics.mascotTop)
                 .padding(.bottom, OnboardingMetrics.mascotBottomStep1_2_4)
 
-                OnboardingSectionLabel(text: "Gender")
+                OnboardingSectionLabel(text: String(localized: "profile.field.gender"))
                 HStack(spacing: 10) {
                     ForEach(Gender.allCases, id: \.self) { g in
                         let selected = gender == g
@@ -75,7 +76,7 @@ struct OnboardingStep1View: View {
                             gender = g
                             Haptics.selection()
                         } label: {
-                            Text(g.rawValue.prefix(1).uppercased() + g.rawValue.dropFirst())
+                            Text(genderLabel(g))
                                 .font(TypographyToken.inter(size: 14, weight: .semibold))
                                 .foregroundStyle(selected ? ColorToken.primary : ColorToken.textSecondary)
                                 .frame(maxWidth: .infinity)
@@ -93,7 +94,7 @@ struct OnboardingStep1View: View {
                 }
                 .offset(x: shakeGender)
 
-                OnboardingSectionLabel(text: "Age")
+                OnboardingSectionLabel(text: String(localized: "profile.field.age"))
                 TextField("", text: $age, prompt: Text("25").foregroundStyle(ColorToken.textTertiary))
                     .keyboardType(.numberPad)
                     .font(TypographyToken.font(.body))
@@ -109,7 +110,7 @@ struct OnboardingStep1View: View {
                     .shadow(color: ColorToken.shadow.opacity(0.06), radius: 4, x: 0, y: 1)
                     .offset(x: shakeAge)
 
-                OnboardingSectionLabel(text: "Height (cm)")
+                OnboardingSectionLabel(text: String(localized: "profile.field.height_cm"))
                 TextField("", text: $height, prompt: Text("175").foregroundStyle(ColorToken.textTertiary))
                     .keyboardType(.decimalPad)
                     .font(TypographyToken.font(.body))
@@ -125,7 +126,7 @@ struct OnboardingStep1View: View {
                     .shadow(color: ColorToken.shadow.opacity(0.06), radius: 4, x: 0, y: 1)
                     .offset(x: shakeHeight)
 
-                OnboardingSectionLabel(text: "Weight (kg)")
+                OnboardingSectionLabel(text: String(localized: "profile.measurements.weight_kg"))
                 TextField("", text: $weight, prompt: Text("70").foregroundStyle(ColorToken.textTertiary))
                     .keyboardType(.decimalPad)
                     .font(TypographyToken.font(.body))
@@ -141,16 +142,16 @@ struct OnboardingStep1View: View {
                     .shadow(color: ColorToken.shadow.opacity(0.06), radius: 4, x: 0, y: 1)
                     .offset(x: shakeWeight)
 
-                OnboardingSectionLabel(text: "Activity Level")
+                OnboardingSectionLabel(text: String(localized: "profile.field.activity_level"))
                 VStack(spacing: 0) {
-                    ForEach(OnboardingStep1View.activityOptions, id: \.0) { opt in
+                    ForEach(activityOptions, id: \.0) { opt in
                         activityRow(value: opt.0, label: opt.1, description: opt.2)
                     }
                 }
                 .offset(x: shakeActivity)
 
                 OnboardingFooterButton(
-                    title: "Continue",
+                    title: String(localized: "common.continue"),
                     isPrimaryEnabled: isComplete && !saving,
                     isLoading: saving,
                     action: { Task { await handleContinue() } }
@@ -177,13 +178,23 @@ struct OnboardingStep1View: View {
         }
     }
 
-    private static let activityOptions: [(ActivityLevel, String, String)] = [
-        (.sedentary, "Sedentary", "Little or no exercise"),
-        (.lightlyActive, "Lightly Active", "1–3 days/week"),
-        (.moderatelyActive, "Moderately Active", "3–5 days/week"),
-        (.veryActive, "Very Active", "6–7 days/week"),
-        (.extraActive, "Extra Active", "Physical job or 2×/day"),
-    ]
+    private var activityOptions: [(ActivityLevel, String, String)] {
+        [
+            (.sedentary, String(localized: "activity.sedentary"), String(localized: "onboarding.step1.activity.sedentary_desc")),
+            (.lightlyActive, String(localized: "activity.lightly_active"), String(localized: "onboarding.step1.activity.lightly_active_desc")),
+            (.moderatelyActive, String(localized: "activity.moderately_active"), String(localized: "onboarding.step1.activity.moderately_active_desc")),
+            (.veryActive, String(localized: "activity.very_active"), String(localized: "onboarding.step1.activity.very_active_desc")),
+            (.extraActive, String(localized: "activity.extra_active"), String(localized: "onboarding.step1.activity.extra_active_desc")),
+        ]
+    }
+
+    private func genderLabel(_ gender: Gender) -> String {
+        switch gender {
+        case .male: return String(localized: "onboarding.step1.gender.male")
+        case .female: return String(localized: "onboarding.step1.gender.female")
+        case .other: return String(localized: "onboarding.step1.gender.other")
+        }
+    }
 
     @ViewBuilder
     private func activityRow(value: ActivityLevel, label: String, description: String) -> some View {
@@ -229,6 +240,7 @@ struct OnboardingStep1View: View {
     private func prefill() async {
         guard let p = try? await OnboardingService.fetchOnboardingProfile() else { return }
         gender = p.gender ?? gender
+        goal = p.goal ?? goal
         if let a = p.age { age = String(a) }
         if let h = p.heightCm { height = formatNum(h) }
         if let w = p.weightKg { weight = formatNum(w) }

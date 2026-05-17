@@ -7,7 +7,7 @@ extension LogView {
             if let selectedFood {
                 Text(selectedFood.description).font(TypographyToken.inter(size: 18, weight: .bold)).foregroundStyle(ColorToken.textPrimary).lineLimit(1)
             }
-            Text("Amount in grams").font(TypographyToken.inter(size: 13, weight: .medium)).foregroundStyle(ColorToken.textSecondary)
+            Text(LocalizedStringKey("log.grams_label")).font(TypographyToken.inter(size: 13, weight: .medium)).foregroundStyle(ColorToken.textSecondary)
             TextField("100", text: $gramsText)
                 .font(TypographyToken.inter(size: 22, weight: .bold))
                 .foregroundStyle(ColorToken.textPrimary)
@@ -24,13 +24,13 @@ extension LogView {
             }
             if let preview {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("For \(gramsText.isEmpty ? "0" : gramsText)g:")
+                    Text(String(format: String(localized: "log.grams_for"), gramsText.isEmpty ? "0" : gramsText))
                         .font(TypographyToken.inter(size: 13, weight: .semibold)).foregroundStyle(ColorToken.textSecondary)
                     Text("🔥 \(Int(preview.calories)) kcal")
-                    Text("🥩 \(oneDecimal(preview.protein))g protein")
-                    Text("🍚 \(oneDecimal(preview.carbs))g carbs")
-                    Text("🥑 \(oneDecimal(preview.fat))g fat")
-                    Text("Looks delicious! 😋").font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textSecondary).italic().padding(.top, 2)
+                    Text("🥩 \(oneDecimal(preview.protein))g \(String(localized: "macro.protein"))")
+                    Text("🍚 \(oneDecimal(preview.carbs))g \(String(localized: "macro.carbs"))")
+                    Text("🥑 \(oneDecimal(preview.fat))g \(String(localized: "macro.fat"))")
+                    Text(LocalizedStringKey("log.looks_delicious")).font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textSecondary).italic().padding(.top, 2)
                 }
                 .font(TypographyToken.inter(size: 15, weight: .regular))
                 .foregroundStyle(ColorToken.textPrimary)
@@ -39,11 +39,11 @@ extension LogView {
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(ColorToken.primary.opacity(0.2), lineWidth: 1))
             }
-            Button("Add to Today") { handleAddTapped(preview: preview) }
+            Button(String(localized: "log.alert.add_to_today")) { handleAddTapped(preview: preview) }
                 .font(TypographyToken.inter(size: 17, weight: .bold)).foregroundStyle(Color.white)
                 .frame(maxWidth: .infinity).padding(.vertical, 16)
                 .background(ColorToken.primary).clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous)).buttonStyle(.plain)
-            Button("Cancel") { showPortionSheet = false }.font(TypographyToken.inter(size: 15, weight: .regular)).foregroundStyle(ColorToken.textPrimary).frame(maxWidth: .infinity)
+            Button(String(localized: "log.alert.cancel")) { showPortionSheet = false }.font(TypographyToken.inter(size: 15, weight: .regular)).foregroundStyle(ColorToken.textPrimary).frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 24).padding(.top, 6)
     }
@@ -53,7 +53,7 @@ extension LogView {
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Today's Log 📋").font(TypographyToken.inter(size: 20, weight: .bold)).foregroundStyle(ColorToken.textPrimary)
+                    Text(LocalizedStringKey("log.todays_log")).font(TypographyToken.inter(size: 20, weight: .bold)).foregroundStyle(ColorToken.textPrimary)
                     Text(formatTodayDate()).font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textSecondary)
                 }
                 Spacer(minLength: 0)
@@ -62,16 +62,16 @@ extension LogView {
                     .frame(width: 32, height: 32).background(ColorToken.muted).clipShape(Circle()).buttonStyle(.plain)
             }
             HStack(spacing: 8) {
-                summaryCard("🔥", "Calories", Int(totals.calories), "kcal", ColorToken.primary)
-                summaryCard("🥩", "Protein", oneDecimal(totals.protein), "g", ColorToken.macroProtein)
-                summaryCard("🍚", "Carbs", oneDecimal(totals.carbs), "g", Color(hex: "#2196F3"))
-                summaryCard("🥑", "Fat", oneDecimal(totals.fat), "g", ColorToken.macroFat)
+                summaryCard("🔥", String(localized: "macro.calories"), Int(totals.calories), "kcal", ColorToken.primary)
+                summaryCard("🥩", String(localized: "macro.protein"), oneDecimal(totals.protein), "g", ColorToken.macroProtein)
+                summaryCard("🍚", String(localized: "macro.carbs"), oneDecimal(totals.carbs), "g", Color(hex: "#2196F3"))
+                summaryCard("🥑", String(localized: "macro.fat"), oneDecimal(totals.fat), "g", ColorToken.macroFat)
             }
             if logEntries.isEmpty {
                 VStack(spacing: 10) {
                     RockyMascotView(mood: .thinking, size: RockyMascotView.Size.large.rawValue)
-                    Text("Nothing logged yet today!").font(TypographyToken.inter(size: 16, weight: .semibold)).foregroundStyle(ColorToken.textPrimary)
-                    Text("Tap the search bar to add food").font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textSecondary)
+                    Text(LocalizedStringKey("log.empty_today.title")).font(TypographyToken.inter(size: 16, weight: .semibold)).foregroundStyle(ColorToken.textPrimary)
+                    Text(LocalizedStringKey("log.empty_today.subtitle")).font(TypographyToken.inter(size: 13, weight: .regular)).foregroundStyle(ColorToken.textSecondary)
                 }
                 .frame(maxWidth: .infinity).padding(.vertical, 40)
             } else {
@@ -84,7 +84,7 @@ extension LogView {
     func summaryCard(_ emoji: String, _ label: String, _ value: CustomStringConvertible, _ unit: String, _ color: Color) -> some View {
         VStack(spacing: 1) {
             Text(emoji).font(.system(size: 18))
-            Text("\(value)").font(TypographyToken.inter(size: 16, weight: .bold)).foregroundStyle(color)
+            Text(String(describing: value)).font(TypographyToken.inter(size: 16, weight: .bold)).foregroundStyle(color)
             Text(unit).font(TypographyToken.inter(size: 10, weight: .medium)).foregroundStyle(ColorToken.mutedForeground)
             Text(label).font(TypographyToken.inter(size: 10, weight: .regular)).foregroundStyle(ColorToken.mutedForeground)
         }
@@ -145,7 +145,7 @@ extension LogView {
     func handleAddTapped(preview: FoodMacroResult?) {
         guard let preview, let selectedFood else { return }
         let grams = Double(gramsText) ?? 0
-        guard grams > 0 else { gramsError = "Please enter a valid amount"; Haptics.warning(); return }
+        guard grams > 0 else { gramsError = String(localized: "log.error.invalid_amount"); Haptics.warning(); return }
         if grams > 5000 { pendingMacros = preview; showLargeAmountConfirm = true; return }
         Task { await addLog(food: selectedFood, grams: grams, macros: preview) }
     }
@@ -175,7 +175,7 @@ extension LogView {
                 }
             }
         } catch {
-            await MainActor.run { gramsError = "Something went wrong. Try again" }
+            await MainActor.run { gramsError = String(localized: "log.error.generic_retry") }
         }
     }
 
@@ -185,9 +185,37 @@ extension LogView {
         Haptics.impactMedium()
     }
 
+    func repeatMeal(_ suggestion: RepeatMealSuggestion) async {
+        let template = suggestion.template
+        let entry = FoodLogEntry(
+            id: String(Int(Date().timeIntervalSince1970 * 1000)),
+            foodName: template.foodName,
+            grams: template.grams,
+            calories: template.calories,
+            protein: template.protein,
+            carbs: template.carbs,
+            fat: template.fat,
+            loggedAt: Date().ISO8601Format(),
+            date: todayISO
+        )
+
+        do {
+            try await repository.addLogEntry(entry)
+            await refreshTodayLog()
+            Haptics.success()
+        } catch {
+            return
+        }
+    }
+
     func refreshTodayLog() async {
         let entries = (try? await repository.loadTodayLog()) ?? []
-        await MainActor.run { logEntries = entries }
+        let recentWindowStart = Calendar.current.date(byAdding: .day, value: -13, to: Date()) ?? Date()
+        let repeatEntries = (try? await repository.loadEntries(from: recentWindowStart, to: Date())) ?? []
+        await MainActor.run {
+            logEntries = entries
+            repeatMeals = buildRepeatMeals(from: repeatEntries)
+        }
     }
 
     func sumEntries(_ entries: [FoodLogEntry]) -> FoodMacroResult {
@@ -200,8 +228,9 @@ extension LogView {
 
     func formatTodayDate() -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "EEEE, MMMM d"
+        formatter.locale = .autoupdatingCurrent
+        formatter.dateStyle = .full
+        formatter.timeStyle = .none
         return formatter.string(from: Date())
     }
 
@@ -218,6 +247,24 @@ extension LogView {
 
     func oneDecimal(_ value: Double) -> String {
         value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value))" : String(format: "%.1f", value)
+    }
+
+    func buildRepeatMeals(from entries: [FoodLogEntry]) -> [RepeatMealSuggestion] {
+        let grouped = Dictionary(grouping: entries) { $0.foodName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        return grouped.compactMap { _, items in
+            guard let template = items.sorted(by: { $0.loggedAt > $1.loggedAt }).first else { return nil }
+            return RepeatMealSuggestion(
+                id: template.foodName.lowercased(),
+                template: template,
+                count: items.count
+            )
+        }
+        .sorted {
+            if $0.count != $1.count { return $0.count > $1.count }
+            return $0.template.loggedAt > $1.template.loggedAt
+        }
+        .prefix(5)
+        .map { $0 }
     }
 
 }

@@ -5,7 +5,7 @@ extension LogView {
         HStack {
             Color.clear.frame(width: 32, height: 32)
             Spacer(minLength: 0)
-            Text("Quick Log")
+            Text(LocalizedStringKey("log.title"))
                 .font(TypographyToken.inter(size: 20, weight: .bold))
                 .foregroundStyle(ColorToken.textPrimary)
             Spacer(minLength: 0)
@@ -13,7 +13,7 @@ extension LogView {
                 Task { await refreshTodayLog(); showTodayLogSheet = true }
             } label: {
                 HStack(spacing: 4) {
-                    Text("📋 Today")
+                    Text(LocalizedStringKey("log.today_button"))
                         .font(TypographyToken.inter(size: 13, weight: .semibold))
                         .foregroundStyle(ColorToken.primary)
                     if !logEntries.isEmpty {
@@ -34,7 +34,7 @@ extension LogView {
     var searchBar: some View {
         HStack(spacing: 8) {
             Text("🔍").font(.system(size: 16))
-            TextField("Search food... (e.g. chicken breast)", text: $query)
+            TextField(String(localized: "log.search.placeholder"), text: $query)
                 .font(TypographyToken.inter(size: 16, weight: .regular))
                 .foregroundStyle(ColorToken.textPrimary)
                 .autocorrectionDisabled()
@@ -63,13 +63,51 @@ extension LogView {
         .shadow(color: ColorToken.shadow.opacity(0.07), radius: 8, x: 0, y: 2)
     }
 
+    var repeatMealsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LocalizedStringKey("personal.repeat_meals.title"))
+                        .font(TypographyToken.inter(size: 18, weight: .bold))
+                        .foregroundStyle(ColorToken.textPrimary)
+                    Text(LocalizedStringKey("personal.repeat_meals.subtitle"))
+                        .font(TypographyToken.inter(size: 12, weight: .regular))
+                        .foregroundStyle(ColorToken.textSecondary)
+                }
+                Spacer(minLength: 0)
+            }
+
+            if repeatMeals.isEmpty {
+                Text(LocalizedStringKey("personal.repeat_meals.empty"))
+                    .font(TypographyToken.inter(size: 13, weight: .regular))
+                    .foregroundStyle(ColorToken.textSecondary)
+                    .padding(.vertical, 4)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(repeatMeals) { item in
+                            repeatMealCard(item)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(ColorToken.card)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(ColorToken.border, lineWidth: 1)
+        )
+    }
+
     @ViewBuilder
     var contentSection: some View {
         if let searchError {
             ErrorStateView(
-                title: searchError == .network ? "No internet connection" : "Something went wrong",
-                message: searchError == .network ? "Please check your connection and try again." : "We could not search foods right now.",
-                retryTitle: "Retry"
+                title: searchError == .network ? String(localized: "log.error.network_title") : String(localized: "common.error.generic_title"),
+                message: searchError == .network ? String(localized: "log.error.network_message") : String(localized: "log.error.search_message"),
+                retryTitle: String(localized: "common.retry")
             ) {
                 Task { await runSearch(query) }
             }
@@ -104,7 +142,7 @@ extension LogView {
                     .lineLimit(2)
 
                 HStack(spacing: 6) {
-                    Text("Per 100g:")
+                    Text(LocalizedStringKey("log.food.per_100g"))
                         .font(TypographyToken.inter(size: 11, weight: .regular))
                         .foregroundStyle(ColorToken.textTertiary)
                     macroTag(label: "kcal", value: "\(Int(food.calories))", color: ColorToken.primary)
@@ -131,10 +169,38 @@ extension LogView {
         .background(color.opacity(0.09)).clipShape(Capsule())
     }
 
+    func repeatMealCard(_ item: RepeatMealSuggestion) -> some View {
+        Button {
+            Task { await repeatMeal(item) }
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(item.title)
+                    .font(TypographyToken.inter(size: 14, weight: .semibold))
+                    .foregroundStyle(ColorToken.textPrimary)
+                    .lineLimit(2)
+                Text(item.subtitle)
+                    .font(TypographyToken.inter(size: 11, weight: .regular))
+                    .foregroundStyle(ColorToken.textSecondary)
+                Text(String(localized: "personal.repeat_meals.action"))
+                    .font(TypographyToken.inter(size: 12, weight: .semibold))
+                    .foregroundStyle(ColorToken.primary)
+            }
+            .frame(width: 180, alignment: .leading)
+            .padding(12)
+            .background(ColorToken.background)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(ColorToken.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     var emptyState: some View {
         VStack(spacing: 12) {
             RockyMascotView(mood: .happy, size: RockyMascotView.Size.large.rawValue)
-            Text("Search for any food above!")
+            Text(LocalizedStringKey("log.empty.title"))
                 .font(TypographyToken.inter(size: 16, weight: .semibold))
                 .foregroundStyle(ColorToken.textPrimary)
             FlowWrapLayout(spacing: 8) {
@@ -164,11 +230,11 @@ extension LogView {
     var noResultState: some View {
         VStack(spacing: 8) {
             RockyMascotView(mood: .thinking, size: RockyMascotView.Size.large.rawValue)
-            Text("Hmm, couldn't find that one")
+            Text(LocalizedStringKey("log.no_results.title"))
                 .font(TypographyToken.inter(size: 16, weight: .semibold))
                 .foregroundStyle(ColorToken.textPrimary)
                 .multilineTextAlignment(.center)
-            Text("Try different keywords")
+            Text(LocalizedStringKey("log.no_results.subtitle"))
                 .font(TypographyToken.inter(size: 14, weight: .regular))
                 .foregroundStyle(ColorToken.textSecondary)
         }

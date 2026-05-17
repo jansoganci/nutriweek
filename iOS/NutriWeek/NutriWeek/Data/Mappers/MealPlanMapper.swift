@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 enum MealPlanMapper {
     struct WeeklyPlanRow: Decodable {
@@ -88,11 +89,20 @@ enum MealPlanMapper {
     }
 
     private static func mealType(from text: String) -> MealType {
-        switch text.lowercased() {
-        case "breakfast": return .breakfast
-        case "lunch": return .lunch
-        case "dinner": return .dinner
-        default: return .snack
+        switch text
+            .lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines) {
+        case "breakfast", "kahvalti":
+            return .breakfast
+        case "lunch", "ogle yemegi":
+            return .lunch
+        case "dinner", "aksam yemegi":
+            return .dinner
+        case "snack", "atistirmalik", "ara ogun":
+            return .snack
+        default:
+            os_log("Warning: unexpected meal type received: %{public}@", log: .default, type: .default, text)
+            return .snack
         }
     }
 

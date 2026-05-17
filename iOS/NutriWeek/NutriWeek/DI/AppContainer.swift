@@ -23,6 +23,7 @@ final class AppContainer {
             onboardingRepository: repositories.onboardingRepository,
             mealPlanRepository: repositories.mealPlanRepository,
             foodLogRepository: repositories.foodLogRepository,
+            activityLogRepository: repositories.activityLogRepository,
             streakService: streakService
         )
     }

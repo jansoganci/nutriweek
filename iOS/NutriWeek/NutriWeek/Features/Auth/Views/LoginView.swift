@@ -23,23 +23,23 @@ struct LoginView: View {
                     VStack {
                         Spacer(minLength: 0)
                         VStack(spacing: 18) {
-                            RockyMascotView(mood: .happy, size: 72, message: "Welcome back!")
+                            RockyMascotView(mood: .happy, size: 72, message: String(localized: "auth.login.welcome_back"))
 
                             NWCard(cornerRadius: 20, padding: 18, rnAuthShadow: true) {
                                 VStack(alignment: .leading, spacing: 10) {
-                                    Text("Log In")
+                                    Text(LocalizedStringKey("auth.login.title"))
                                         .font(TypographyToken.inter(size: 24, weight: .bold))
                                         .foregroundStyle(ColorToken.textPrimary)
 
-                                    Text("Continue where you left off.")
+                                    Text(LocalizedStringKey("auth.login.subtitle"))
                                         .font(TypographyToken.inter(size: 14, weight: .regular))
                                         .foregroundStyle(ColorToken.textSecondary)
                                         .padding(.bottom, 8)
 
                                     NWTextField(
-                                        label: "Email",
+                                        label: String(localized: "auth.login.email_label"),
                                         text: $viewModel.email,
-                                        placeholder: "you@example.com",
+                                        placeholder: String(localized: "auth.login.email_placeholder"),
                                         keyboardType: .emailAddress,
                                         textContentType: .emailAddress,
                                         errorMessage: nil,
@@ -48,9 +48,9 @@ struct LoginView: View {
                                     )
 
                                     NWTextField(
-                                        label: "Password",
+                                        label: String(localized: "auth.login.password_label"),
                                         text: $viewModel.password,
-                                        placeholder: "Your password",
+                                        placeholder: String(localized: "auth.login.password_placeholder"),
                                         isSecure: true,
                                         textContentType: .password,
                                         errorMessage: nil,
@@ -63,7 +63,7 @@ struct LoginView: View {
                                         Button {
                                             showForgotPasswordAlert = true
                                         } label: {
-                                            Text("Forgot Password?")
+                                            Text(LocalizedStringKey("auth.login.forgot_password"))
                                                 .font(TypographyToken.inter(size: 13, weight: .semibold))
                                                 .foregroundStyle(ColorToken.primary)
                                         }
@@ -80,7 +80,7 @@ struct LoginView: View {
                                     }
 
                                     NWButton(
-                                        title: "Login",
+                                        title: String(localized: "auth.login.title"),
                                         variant: .primary,
                                         isLoading: viewModel.isLoading,
                                         isEnabled: canSubmit,
@@ -94,10 +94,10 @@ struct LoginView: View {
 
                                     Button(action: onShowRegister) {
                                         HStack(spacing: 0) {
-                                            Text("New here? ")
+                                            Text(LocalizedStringKey("auth.login.new_here"))
                                                 .font(TypographyToken.inter(size: 14, weight: .regular))
                                                 .foregroundStyle(ColorToken.textSecondary)
-                                            Text("Create account")
+                                            Text(LocalizedStringKey("auth.login.create_account"))
                                                 .font(TypographyToken.inter(size: 14, weight: .bold))
                                                 .foregroundStyle(ColorToken.primary)
                                         }
@@ -121,10 +121,10 @@ struct LoginView: View {
             }
             .ignoresSafeArea(edges: .all)
             .toolbar(.hidden, for: .navigationBar)
-            .alert("Forgot Password", isPresented: $showForgotPasswordAlert) {
-                Button("OK", role: .cancel) {}
+            .alert(String(localized: "auth.login.forgot_password_title"), isPresented: $showForgotPasswordAlert) {
+                Button(String(localized: "auth.login.ok"), role: .cancel) {}
             } message: {
-                Text("Password reset flow will be added soon.")
+                Text(LocalizedStringKey("auth.login.reset_coming_soon"))
             }
         }
     }

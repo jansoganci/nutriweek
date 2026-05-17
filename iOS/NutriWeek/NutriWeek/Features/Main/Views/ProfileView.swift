@@ -42,26 +42,26 @@ struct ProfileView: View {
             }
         }
         .task { await loadProfile() }
-        .alert("Validation", isPresented: $showValidationAlert) {
-            Button("OK", role: .cancel) {}
+        .alert(String(localized: "profile.alert.validation_title"), isPresented: $showValidationAlert) {
+            Button(String(localized: "profile.alert.ok"), role: .cancel) {}
         } message: {
             Text(validationAlertMessage)
         }
-        .alert("Reset All Data", isPresented: $showResetAllConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete Everything", role: .destructive) {
+        .alert(String(localized: "profile.alert.reset_all_title"), isPresented: $showResetAllConfirm) {
+            Button(String(localized: "profile.alert.cancel"), role: .cancel) {}
+            Button(String(localized: "profile.alert.delete_everything"), role: .destructive) {
                 Task { await handleResetAll() }
             }
         } message: {
-            Text("Are you sure? This will delete everything.")
+            Text(LocalizedStringKey("profile.delete_confirm.title"))
         }
-        .alert("Delete Account", isPresented: $showDeleteAccountConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete My Account", role: .destructive) {
+        .alert(String(localized: "profile.alert.delete_account_title"), isPresented: $showDeleteAccountConfirm) {
+            Button(String(localized: "profile.alert.cancel"), role: .cancel) {}
+            Button(String(localized: "profile.alert.delete_my_account"), role: .destructive) {
                 Task { await handleDeleteAccount() }
             }
         } message: {
-            Text("This will permanently delete all your data including meal plans, food logs, measurements, and streaks. This action cannot be undone.")
+            Text(LocalizedStringKey("profile.delete_confirm.message"))
         }
         .sheet(isPresented: $showMeasurementLogSheet) {
             MeasurementLogSheet(onSaved: { await loadProfile() })

@@ -7,20 +7,20 @@ struct OnboardingStep2View: View {
     @State private var saving = false
     @State private var errorMessage: String?
 
-    private let cards: [(Goal, String, String, String)] = [
-        (.cut, "🔥", "Lose Fat", "Calorie deficit · Look lean · Feel light"),
-        (.bulk, "💪", "Build Muscle", "Calorie surplus · Get strong · Grow"),
-        (.maintain, "⚖️", "Stay Balanced", "Eat at maintenance · Keep what you have"),
+    private let cards: [(Goal, String, LocalizedStringKey, LocalizedStringKey)] = [
+        (.cut, "🔥", LocalizedStringKey("goal.cut.short"), LocalizedStringKey("goal.cut.subtitle")),
+        (.bulk, "💪", LocalizedStringKey("goal.bulk.short"), LocalizedStringKey("goal.bulk.subtitle")),
+        (.maintain, "⚖️", LocalizedStringKey("goal.maintain.short"), LocalizedStringKey("goal.maintain.subtitle")),
     ]
 
     private var rockyMessage: String {
         guard let goal else {
-            return "What's the mission? Choose your goal!"
+            return String(localized: "onboarding.goal.prompt")
         }
         switch goal {
-        case .cut: return "Let's get shredded! I'll keep the snacks away 🔥"
-        case .bulk: return "Eating more? My favorite goal! 🍗"
-        case .maintain: return "Balance is everything. Very zen ☯️"
+        case .cut: return String(localized: "onboarding.goal.rocky.cut")
+        case .bulk: return String(localized: "onboarding.goal.rocky.bulk")
+        case .maintain: return String(localized: "onboarding.goal.rocky.maintain")
         }
     }
 
@@ -38,7 +38,7 @@ struct OnboardingStep2View: View {
                 .padding(.top, OnboardingMetrics.mascotTop)
                 .padding(.bottom, OnboardingMetrics.mascotBottomStep1_2_4)
 
-                Text("Your Goal")
+                Text(LocalizedStringKey("onboarding.goal.title"))
                     .font(TypographyToken.inter(size: 26, weight: .bold))
                     .foregroundStyle(ColorToken.textPrimary)
                     .padding(.bottom, 20)
@@ -50,7 +50,7 @@ struct OnboardingStep2View: View {
                 }
 
                 OnboardingFooterButton(
-                    title: "Continue",
+                    title: String(localized: "common.continue"),
                     isPrimaryEnabled: isComplete && !saving,
                     isLoading: saving,
                     marginTop: OnboardingMetrics.continueTopStep2,
@@ -77,7 +77,7 @@ struct OnboardingStep2View: View {
     }
 
     @ViewBuilder
-    private func goalCard(goal g: Goal, emoji: String, title: String, subtitle: String) -> some View {
+    private func goalCard(goal g: Goal, emoji: String, title: LocalizedStringKey, subtitle: LocalizedStringKey) -> some View {
         let selected = goal == g
         Button {
             goal = g

@@ -22,23 +22,23 @@ struct RegisterView: View {
                     VStack {
                         Spacer(minLength: 0)
                         VStack(spacing: 18) {
-                            RockyMascotView(mood: .encouraging, size: 72, message: "Let's create your account!")
+                            RockyMascotView(mood: .encouraging, size: 72, message: String(localized: "auth.register.rocky_message"))
 
                             NWCard(cornerRadius: 20, padding: 18, rnAuthShadow: true) {
                                 VStack(alignment: .leading, spacing: 10) {
-                                    Text("Create Account")
+                                    Text(LocalizedStringKey("auth.register.title"))
                                         .font(TypographyToken.inter(size: 24, weight: .bold))
                                         .foregroundStyle(ColorToken.textPrimary)
 
-                                    Text("Start your NutriWeek journey with Rocky.")
+                                    Text(LocalizedStringKey("auth.register.subtitle"))
                                         .font(TypographyToken.inter(size: 14, weight: .regular))
                                         .foregroundStyle(ColorToken.textSecondary)
                                         .padding(.bottom, 8)
 
                                     NWTextField(
-                                        label: "Email",
+                                        label: String(localized: "auth.register.email_label"),
                                         text: $viewModel.email,
-                                        placeholder: "you@example.com",
+                                        placeholder: String(localized: "auth.register.email_placeholder"),
                                         keyboardType: .emailAddress,
                                         textContentType: .emailAddress,
                                         errorMessage: nil,
@@ -47,9 +47,9 @@ struct RegisterView: View {
                                     )
 
                                     NWTextField(
-                                        label: "Password",
+                                        label: String(localized: "auth.register.password_label"),
                                         text: $viewModel.password,
-                                        placeholder: "At least 6 characters",
+                                        placeholder: String(localized: "auth.register.password_placeholder"),
                                         isSecure: true,
                                         textContentType: .newPassword,
                                         errorMessage: nil,
@@ -58,9 +58,9 @@ struct RegisterView: View {
                                     )
 
                                     NWTextField(
-                                        label: "Confirm Password",
+                                        label: String(localized: "auth.register.confirm_password_label"),
                                         text: $viewModel.confirmPassword,
-                                        placeholder: "Repeat your password",
+                                        placeholder: String(localized: "auth.register.confirm_password_placeholder"),
                                         isSecure: true,
                                         textContentType: .password,
                                         errorMessage: nil,
@@ -77,7 +77,7 @@ struct RegisterView: View {
                                     }
 
                                     NWButton(
-                                        title: "Create Account",
+                                        title: String(localized: "auth.register.title"),
                                         variant: .primary,
                                         isLoading: viewModel.isLoading,
                                         isEnabled: canSubmit,
@@ -94,10 +94,10 @@ struct RegisterView: View {
                                         onShowLogin()
                                     } label: {
                                         HStack(spacing: 0) {
-                                            Text("Already have an account? ")
+                                            Text(LocalizedStringKey("auth.register.has_account"))
                                                 .font(TypographyToken.inter(size: 14, weight: .regular))
                                                 .foregroundStyle(ColorToken.textSecondary)
-                                            Text("Log in")
+                                            Text(LocalizedStringKey("auth.register.login"))
                                                 .font(TypographyToken.inter(size: 14, weight: .bold))
                                                 .foregroundStyle(ColorToken.primary)
                                         }

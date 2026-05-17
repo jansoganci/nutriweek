@@ -3,6 +3,7 @@ import SwiftUI
 struct OnboardingStep3View: View {
     @Bindable var coordinator: OnboardingCoordinator
 
+    @State private var goal: Goal = .maintain
     @State private var waist = ""
     @State private var hips = ""
     @State private var chest = ""
@@ -13,9 +14,11 @@ struct OnboardingStep3View: View {
     @State private var errorMessage: String?
 
     private var rockyMessage: String {
-        hasTyped
-            ? "Look at you, being all precise! 📏"
-            : "Don't worry, these are just for YOU. No judging here!"
+        switch goal {
+        case .cut: return String(localized: "onboarding.step3.rocky.cut")
+        case .bulk: return String(localized: "onboarding.step3.rocky.bulk")
+        case .maintain: return String(localized: "onboarding.step3.rocky.maintain")
+        }
     }
 
     var body: some View {
@@ -37,26 +40,26 @@ struct OnboardingStep3View: View {
                 .padding(.top, OnboardingMetrics.mascotTop)
                 .padding(.bottom, OnboardingMetrics.mascotBottomStep3)
 
-                Text("Body Measurements")
+                Text(LocalizedStringKey("profile.measurements.title"))
                     .font(TypographyToken.inter(size: 26, weight: .bold))
                     .foregroundStyle(ColorToken.textPrimary)
                     .padding(.bottom, 4)
 
-                Text("All optional — skip if you prefer")
+                Text(LocalizedStringKey("onboarding.step3.optional_hint"))
                     .font(TypographyToken.inter(size: 14, weight: .regular))
                     .foregroundStyle(ColorToken.textSecondary)
                     .padding(.bottom, 20)
 
                 VStack(spacing: 12) {
-                    measurementRow(label: "Waist", placeholder: "80", text: $waist)
-                    measurementRow(label: "Hips", placeholder: "95", text: $hips)
-                    measurementRow(label: "Chest", placeholder: "90", text: $chest)
-                    measurementRow(label: "Left Arm", placeholder: "35", text: $arm)
-                    measurementRow(label: "Left Leg", placeholder: "55", text: $leg)
+                    measurementRow(label: String(localized: "profile.measurements.waist"), placeholder: "80", text: $waist)
+                    measurementRow(label: String(localized: "profile.measurements.hips"), placeholder: "95", text: $hips)
+                    measurementRow(label: String(localized: "profile.measurements.chest"), placeholder: "90", text: $chest)
+                    measurementRow(label: String(localized: "profile.measurements.left_arm"), placeholder: "35", text: $arm)
+                    measurementRow(label: String(localized: "profile.measurements.left_leg"), placeholder: "55", text: $leg)
                 }
 
                 OnboardingFooterButton(
-                    title: "Continue",
+                    title: String(localized: "common.continue"),
                     isPrimaryEnabled: true,
                     isLoading: saving,
                     action: { Task { await saveAndNavigate() } }
@@ -78,6 +81,7 @@ struct OnboardingStep3View: View {
         .scrollDismissesKeyboard(.interactively)
         .background(ColorToken.background)
         .toolbar(.hidden, for: .navigationBar)
+        .task { await loadGoal() }
         .onChange(of: waist) { _, _ in hasTyped = true }
         .onChange(of: hips) { _, _ in hasTyped = true }
         .onChange(of: chest) { _, _ in hasTyped = true }
@@ -129,6 +133,12 @@ struct OnboardingStep3View: View {
         let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return nil }
         return Double(t.replacingOccurrences(of: ",", with: "."))
+    }
+
+    private func loadGoal() async {
+        guard let profile = try? await OnboardingService.fetchOnboardingProfile(),
+              let storedGoal = profile.goal else { return }
+        goal = storedGoal
     }
 
     private func saveAndNavigate() async {

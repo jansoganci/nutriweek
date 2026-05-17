@@ -5,11 +5,13 @@ struct RepositoryFactory {
     let onboardingRepository: OnboardingRepositoryProtocol
     let foodLogRepository: FoodLogRepositoryProtocol
     let mealPlanRepository: MealPlanRepositoryProtocol
+    let activityLogRepository: ActivityLogRepositoryProtocol
 
     static let live = RepositoryFactory(
         authRepository: SupabaseAuthRepository(),
         onboardingRepository: SupabaseOnboardingRepository(),
         foodLogRepository: SupabaseFoodLogRepository(),
-        mealPlanRepository: SupabaseMealPlanRepository()
+        mealPlanRepository: SupabaseMealPlanRepository(),
+        activityLogRepository: SupabaseActivityLogRepository()
     )
 }

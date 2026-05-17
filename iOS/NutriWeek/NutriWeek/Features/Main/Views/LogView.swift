@@ -25,8 +25,16 @@ struct LogView: View {
     @State var debounceTask: Task<Void, Never>?
     @State var showDeleteConfirm = false
     @State var entryToDelete: FoodLogEntry?
+    @State var repeatMeals: [RepeatMealSuggestion] = []
 
-    let quickPills = ["Chicken Breast", "Eggs", "Banana", "Milk", "Rice", "Avocado"]
+    let quickPills = [
+        String(localized: "log.quick_pill.chicken_breast"),
+        String(localized: "log.quick_pill.eggs"),
+        String(localized: "log.quick_pill.banana"),
+        String(localized: "log.quick_pill.milk"),
+        String(localized: "log.quick_pill.rice"),
+        String(localized: "log.quick_pill.avocado"),
+    ]
 
     init(repository: FoodLogRepositoryProtocol) {
         self.repository = repository
@@ -38,6 +46,7 @@ struct LogView: View {
                 VStack(spacing: 16) {
                     header
                     searchBar
+                    repeatMealsSection
                     contentSection
                 }
                 .padding(.horizontal, SpacingToken.gutter)
@@ -50,8 +59,8 @@ struct LogView: View {
 
             if showSuccessOverlay {
                 ToastView(
-                    title: "Logged!",
-                    subtitle: "Food added to today's log.",
+                    title: String(localized: "log.toast.logged_title"),
+                    subtitle: String(localized: "log.toast.logged_subtitle"),
                     style: .success
                 )
                 .padding(.horizontal, SpacingToken.gutter)
@@ -69,19 +78,19 @@ struct LogView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .alert("That's a lot... 😅", isPresented: $showLargeAmountConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Yes, log it") { performAddFromPendingLargeAmount() }
+        .alert(String(localized: "log.alert.large_amount_title"), isPresented: $showLargeAmountConfirm) {
+            Button(String(localized: "log.alert.cancel"), role: .cancel) {}
+            Button(String(localized: "log.alert.large_amount_confirm")) { performAddFromPendingLargeAmount() }
         } message: {
-            Text("Are you sure you want to log more than 5kg of this food?")
+            Text(LocalizedStringKey("log.confirm.over_5kg"))
         }
-        .alert("Remove food?", isPresented: $showDeleteConfirm, presenting: entryToDelete) { entry in
-            Button("Cancel", role: .cancel) {}
-            Button("Remove", role: .destructive) {
+        .alert(String(localized: "log.alert.remove_title"), isPresented: $showDeleteConfirm, presenting: entryToDelete) { entry in
+            Button(String(localized: "log.alert.cancel"), role: .cancel) {}
+            Button(String(localized: "log.alert.remove_confirm"), role: .destructive) {
                 Task { await remove(entry: entry) }
             }
         } message: { entry in
-            Text("Remove \"\(entry.foodName)\" from today's log?")
+            Text(String(localized: "log.confirm.remove_food \(entry.foodName)"))
         }
     }
 }

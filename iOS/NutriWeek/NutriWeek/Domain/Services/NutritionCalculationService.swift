@@ -34,10 +34,10 @@ enum NutritionCalculationService {
     }
 
     static func getBMICategory(bmi: Double) -> BMICategory {
-        if bmi < 18.5 { return BMICategory(label: "Underweight", colorHex: "#FFB300") }
-        if bmi < 25 { return BMICategory(label: "Healthy", colorHex: "#4CAF50") }
-        if bmi < 30 { return BMICategory(label: "Overweight", colorHex: "#FFB300") }
-        return BMICategory(label: "Obese", colorHex: "#FF4444")
+        if bmi < 18.5 { return BMICategory(label: String(localized: "bmi.underweight"), colorHex: "#FFB300") }
+        if bmi < 25 { return BMICategory(label: String(localized: "bmi.healthy"), colorHex: "#4CAF50") }
+        if bmi < 30 { return BMICategory(label: String(localized: "bmi.overweight"), colorHex: "#FFB300") }
+        return BMICategory(label: String(localized: "bmi.obese"), colorHex: "#FF4444")
     }
 
     static func calculateBMR(weight: Double, height: Double, age: Int, gender: Gender) -> Int {

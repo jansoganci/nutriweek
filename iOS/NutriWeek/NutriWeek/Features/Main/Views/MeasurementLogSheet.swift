@@ -36,7 +36,7 @@ struct MeasurementLogSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
-                Text("Yeni Ölçüm")
+                Text(String(localized: "measurement.title"))
                     .font(TypographyToken.inter(size: 20, weight: .bold))
                     .foregroundStyle(ColorToken.textPrimary)
                 Spacer(minLength: 0)
@@ -60,17 +60,17 @@ struct MeasurementLogSheet: View {
                 VStack(alignment: .leading, spacing: 14) {
                     switch selectedTab {
                     case .weight:
-                        measurementField("Weight (kg)", text: $weightKg, placeholder: "e.g. 70", keyboard: .decimalPad)
+                        measurementField(String(localized: "profile.measurements.weight_kg"), text: $weightKg, placeholder: String(localized: "measurement.placeholder.weight"), keyboard: .decimalPad)
                     case .body:
-                        measurementField("Waist (cm)", text: $waistCm, placeholder: "e.g. 82", keyboard: .decimalPad)
-                        measurementField("Hips (cm)", text: $hipsCm, placeholder: "e.g. 96", keyboard: .decimalPad)
-                        measurementField("Chest (cm)", text: $chestCm, placeholder: "e.g. 100", keyboard: .decimalPad)
-                        measurementField("Left Arm (cm)", text: $armCm, placeholder: "e.g. 33", keyboard: .decimalPad)
-                        measurementField("Left Leg (cm)", text: $legCm, placeholder: "e.g. 55", keyboard: .decimalPad)
+                        measurementField(String(localized: "profile.measurements.waist_cm"), text: $waistCm, placeholder: String(localized: "measurement.placeholder.waist"), keyboard: .decimalPad)
+                        measurementField(String(localized: "profile.measurements.hips_cm"), text: $hipsCm, placeholder: String(localized: "measurement.placeholder.hips"), keyboard: .decimalPad)
+                        measurementField(String(localized: "profile.measurements.chest_cm"), text: $chestCm, placeholder: String(localized: "measurement.placeholder.chest"), keyboard: .decimalPad)
+                        measurementField(String(localized: "profile.measurements.left_arm_cm"), text: $armCm, placeholder: String(localized: "measurement.placeholder.arm"), keyboard: .decimalPad)
+                        measurementField(String(localized: "profile.measurements.left_leg_cm"), text: $legCm, placeholder: String(localized: "measurement.placeholder.leg"), keyboard: .decimalPad)
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("DATE")
+                        Text(LocalizedStringKey("common.date"))
                             .font(TypographyToken.inter(size: 12, weight: .semibold))
                             .foregroundStyle(ColorToken.mutedForeground)
                             .tracking(0.5)
@@ -91,7 +91,7 @@ struct MeasurementLogSheet: View {
                         ProgressView()
                             .tint(Color.white)
                     } else {
-                        Text("Save")
+                        Text(LocalizedStringKey("common.save"))
                             .font(TypographyToken.inter(size: 17, weight: .bold))
                             .foregroundStyle(Color.white)
                     }
@@ -107,8 +107,8 @@ struct MeasurementLogSheet: View {
         .padding(.horizontal, 20)
         .padding(.top, 6)
         .background(ColorToken.background)
-        .alert("Could not save", isPresented: $showError) {
-            Button("OK", role: .cancel) {}
+        .alert(String(localized: "measurement.save_error_title"), isPresented: $showError) {
+            Button(String(localized: "measurement.ok"), role: .cancel) {}
         } message: {
             Text(errorMessage)
         }
@@ -140,12 +140,12 @@ struct MeasurementLogSheet: View {
         switch selectedTab {
         case .weight:
             guard let w = Double(weightKg.trimmingCharacters(in: .whitespacesAndNewlines)), !weightKg.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                errorMessage = "Please enter a valid weight."
+                errorMessage = String(localized: "measurement.validation.weight_invalid")
                 showError = true
                 return
             }
             if w < 20 || w > 500 {
-                errorMessage = "Weight must be between 20 and 500 kg."
+                errorMessage = String(localized: "measurement.validation.weight_range")
                 showError = true
                 return
             }
@@ -166,32 +166,32 @@ struct MeasurementLogSheet: View {
             let l = optionalDouble(legCm)
             let anyFilled = [w, h, c, a, l].contains { $0 != nil }
             guard anyFilled else {
-                errorMessage = "Enter at least one measurement."
+                errorMessage = String(localized: "measurement.validation.any_required")
                 showError = true
                 return
             }
             if waistCm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false, w == nil {
-                errorMessage = "Please check your waist value."
+                errorMessage = String(localized: "measurement.validation.waist_invalid")
                 showError = true
                 return
             }
             if hipsCm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false, h == nil {
-                errorMessage = "Please check your hips value."
+                errorMessage = String(localized: "measurement.validation.hips_invalid")
                 showError = true
                 return
             }
             if chestCm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false, c == nil {
-                errorMessage = "Please check your chest value."
+                errorMessage = String(localized: "measurement.validation.chest_invalid")
                 showError = true
                 return
             }
             if armCm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false, a == nil {
-                errorMessage = "Please check your arm value."
+                errorMessage = String(localized: "measurement.validation.arm_invalid")
                 showError = true
                 return
             }
             if legCm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false, l == nil {
-                errorMessage = "Please check your leg value."
+                errorMessage = String(localized: "measurement.validation.leg_invalid")
                 showError = true
                 return
             }

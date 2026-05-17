@@ -14,7 +14,7 @@ struct RootView: View {
         Group {
             switch coordinator.route {
             case .bootstrapping:
-                ProgressView("Checking your session...")
+                ProgressView(String(localized: "root.checking_session"))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(ColorToken.background)
             case .auth:

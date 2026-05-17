@@ -36,7 +36,7 @@ extension ProfileView {
                 .value
 
             guard let row = profileRows.first else {
-                throw NSError(domain: "ProfileView", code: 1, userInfo: [NSLocalizedDescriptionKey: "Profile not found. Please complete onboarding again."])
+                throw NSError(domain: "ProfileView", code: 1, userInfo: [NSLocalizedDescriptionKey: String(localized: "profile.error.not_found")])
             }
 
             let latestWeightRows: [LatestWeightRow] = (try? await client.from("body_measurements")
@@ -96,11 +96,11 @@ extension ProfileView {
         let ageNum = Int(infoDraft.age) ?? -1
         let heightNum = Double(infoDraft.height) ?? -1
         var valid = true
-        if ageNum < 10 || ageNum > 120 { ageError = "Age must be between 10 and 120"; valid = false } else { ageError = nil }
-        if heightNum < 50 || heightNum > 300 { heightError = "Height must be between 50 and 300 cm"; valid = false } else { heightError = nil }
+        if ageNum < 10 || ageNum > 120 { ageError = String(localized: "profile.validation.age_range"); valid = false } else { ageError = nil }
+        if heightNum < 50 || heightNum > 300 { heightError = String(localized: "profile.validation.height_range"); valid = false } else { heightError = nil }
         guard valid else { return }
         guard let gender = Gender(rawValue: infoDraft.gender.lowercased()), let activity = ActivityLevel(rawValue: infoDraft.activityLevel.lowercased()) else {
-            validationAlertMessage = "Gender and activity level are required."
+            validationAlertMessage = String(localized: "profile.validation.gender_activity_required")
             showValidationAlert = true
             return
         }
@@ -131,9 +131,9 @@ extension ProfileView {
             results = calc
             infoFields = infoDraft
             editingInfo = false
-            showToastMessage("Profile updated! ✅")
+            showToastMessage(String(localized: "profile.toast.updated"))
         } catch {
-            validationAlertMessage = "Save failed: \(error.localizedDescription)"
+            validationAlertMessage = String(localized: "profile.error.save_failed \(error.localizedDescription)")
             showValidationAlert = true
         }
     }
@@ -146,9 +146,9 @@ extension ProfileView {
                 .upsert(ResetProfile(user_id: userId, onboarding_complete: false, onboarding_step: 0), onConflict: "user_id")
                 .execute()
             if let bundleId = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: bundleId) }
-            showToastMessage("All local data reset. Please reopen app.")
+            showToastMessage(String(localized: "profile.toast.reset_all_done"))
         } catch {
-            validationAlertMessage = "Reset failed: \(error.localizedDescription)"
+            validationAlertMessage = String(localized: "profile.error.reset_failed \(error.localizedDescription)")
             showValidationAlert = true
         }
     }
@@ -160,13 +160,13 @@ extension ProfileView {
             struct DeleteAccountResponse: Decodable { let success: Bool }
             let response: DeleteAccountResponse = try await EdgeFunctionClient(client: client).invoke("delete-account")
             guard response.success else {
-                validationAlertMessage = "Could not delete your account. Please try again."
+                validationAlertMessage = String(localized: "profile.error.delete_failed_generic")
                 showValidationAlert = true
                 return
             }
             try await client.auth.signOut()
         } catch {
-            validationAlertMessage = "Delete account failed: \(error.localizedDescription)"
+            validationAlertMessage = String(localized: "profile.error.delete_failed \(error.localizedDescription)")
             showValidationAlert = true
         }
     }
@@ -180,32 +180,32 @@ extension ProfileView {
     func clearFieldErrors() { ageError = nil; heightError = nil }
 
     func goalLabel(_ goal: Goal) -> String {
-        switch goal { case .cut: return "Lose Fat 🔥"; case .bulk: return "Build Muscle 💪"; case .maintain: return "Stay Balanced ⚖️" }
+        switch goal { case .cut: return String(localized: "goal.cut"); case .bulk: return String(localized: "goal.bulk"); case .maintain: return String(localized: "goal.maintain") }
     }
     func activityLabel(_ level: ActivityLevel) -> String {
         switch level {
-        case .sedentary: return "Sedentary"
-        case .lightlyActive: return "Lightly Active"
-        case .moderatelyActive: return "Moderately Active"
-        case .veryActive: return "Very Active"
-        case .extraActive: return "Extra Active"
+        case .sedentary: return String(localized: "activity.sedentary")
+        case .lightlyActive: return String(localized: "activity.lightly_active")
+        case .moderatelyActive: return String(localized: "activity.moderately_active")
+        case .veryActive: return String(localized: "activity.very_active")
+        case .extraActive: return String(localized: "activity.extra_active")
         }
     }
     func rockyMessage(for goal: Goal) -> String {
-        switch goal { case .cut: return "Stay in that deficit! You've got this 🔥"; case .bulk: return "Eat big, lift big! Let's grow 💪"; case .maintain: return "Balance is the key ⚖️" }
+        switch goal { case .cut: return String(localized: "profile.rocky.cut"); case .bulk: return String(localized: "profile.rocky.bulk"); case .maintain: return String(localized: "profile.rocky.maintain") }
     }
     func dietaryLabel(_ pref: DietaryPreference) -> String {
         switch pref {
-        case .vegetarian: return "Vegetarian"
-        case .vegan: return "Vegan"
-        case .glutenFree: return "Gluten Free"
-        case .dairyFree: return "Dairy Free"
-        case .keto: return "Keto"
-        case .paleo: return "Paleo"
-        case .halal: return "Halal"
-        case .kosher: return "Kosher"
-        case .nutFree: return "Nut Free"
-        case .lowSodium: return "Low Sodium"
+        case .vegetarian: return String(localized: "diet.vegetarian")
+        case .vegan: return String(localized: "diet.vegan")
+        case .glutenFree: return String(localized: "diet.gluten_free")
+        case .dairyFree: return String(localized: "diet.dairy_free")
+        case .keto: return String(localized: "diet.keto")
+        case .paleo: return String(localized: "diet.paleo")
+        case .halal: return String(localized: "diet.halal")
+        case .kosher: return String(localized: "diet.kosher")
+        case .nutFree: return String(localized: "diet.nut_free")
+        case .lowSodium: return String(localized: "diet.low_sodium")
         }
     }
     func oneDecimal(_ value: Double) -> String {

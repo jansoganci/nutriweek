@@ -93,7 +93,7 @@ struct OnboardingHeaderRow: View {
                 Color.clear.frame(width: 60, height: 44)
             case .skip(let action):
                 Button(action: action) {
-                    Text("Skip")
+                    Text(LocalizedStringKey("onboarding.skip"))
                         .font(TypographyToken.inter(size: 15, weight: .semibold))
                         .foregroundStyle(ColorToken.primary)
                 }

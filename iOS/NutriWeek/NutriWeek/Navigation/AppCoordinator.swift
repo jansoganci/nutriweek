@@ -23,6 +23,7 @@ final class AppCoordinator {
         onboardingRepository: OnboardingRepositoryProtocol,
         mealPlanRepository: MealPlanRepositoryProtocol,
         foodLogRepository: FoodLogRepositoryProtocol,
+        activityLogRepository: ActivityLogRepositoryProtocol,
         streakService: StreakService? = nil
     ) {
         self.authCoordinator = AuthCoordinator(authViewModel: authViewModel)
@@ -30,6 +31,7 @@ final class AppCoordinator {
         self.mainTabCoordinator = MainTabCoordinator(
             mealPlanRepository: mealPlanRepository,
             foodLogRepository: foodLogRepository,
+            activityLogRepository: activityLogRepository,
             streakService: streakService
         )
         self.onboardingRepository = onboardingRepository
